@@ -359,7 +359,10 @@ def existing_dnis_flow_builder() -> tuple[dict[str, str] | None, bool, str | Non
         flow = ContactFlowSpec(
             name=flow_name.strip(),
             description=description.strip() or "Inbound flow for an existing DNIS",
-            welcome_message=welcome_message.strip(),
+            welcome_message=(
+                welcome_message.strip()
+                or "Thank you for calling. Please hold while we connect you."
+            ),
             type=flow_type,
         )
         files = render_existing_dnis_contact_flow_files(
