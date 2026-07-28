@@ -17,11 +17,6 @@ def _validation_message(exc: ValidationError) -> str:
 
 def manual_builder() -> tuple[AgentResponse | None, bool]:
     """Render the compact explicit-field form used for smaller tasks."""
-    st.subheader("Quick setup form")
-    st.caption(
-        "Create an instance with routing skills and agents. "
-        "Use the Excel template when contact flows or DNIS associations are required."
-    )
 
     count_left, count_right = st.columns(2)
     skill_count = int(
@@ -276,11 +271,6 @@ def _resource_id(value: str) -> str:
 
 def existing_dnis_flow_builder() -> tuple[dict[str, str] | None, bool, str | None]:
     """Render a focused form for a new flow associated with an existing DNIS."""
-    st.subheader("Add contact flow to existing DNIS")
-    st.caption(
-        "This creates a contact flow and associates it with a phone number already claimed "
-        "in Amazon Connect. It does not create an instance or claim another number."
-    )
 
     with st.form("existing_dnis_flow_form"):
         st.markdown("#### Existing Amazon Connect resources")

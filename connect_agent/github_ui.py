@@ -23,14 +23,13 @@ _BUTTON_STYLE = """
 .st-key-_github_deploy button p,
 [class*="st-key-"][class*="_github_confirm_btn"] button p,
 [class*="st-key-"][class*="_github_cancel_btn"] button p {
-    color: #000000 !important;
+    color: #031a45 !important;
 }
 
 .st-key-_github_deploy button:hover,
 [class*="st-key-"][class*="_github_confirm_btn"] button:hover,
 [class*="st-key-"][class*="_github_cancel_btn"] button:hover {
-    color: #000000 !important;
-    border: 1px solid rgba(0, 0, 0, 0.45) !important;
+    color: #031a45 !important;
 }
 </style>
 """
@@ -66,7 +65,7 @@ def github_publish_panel(
     result_key = f"{key_prefix}_github_result"
     confirm_key = f"{key_prefix}_github_confirm"
 
-    with st.expander("Deploy Terraform to GitHub", expanded=False):
+    with st.expander("Deploy", expanded=False):
         if not token:
             st.info(
                 "GitHub deployment is not configured. Set `GITHUB_TOKEN` in the "
