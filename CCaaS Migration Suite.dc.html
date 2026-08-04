@@ -1685,7 +1685,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { loggedIn: false, page: 'projects', connectTab: 'connector', selectedSource: null, adminTab: 'tenants', intTab: 'all', showIntConfig: false, configIntName: '', scenario: 'avaya-genesys', demoData: null, flowView: 'source', zoom: 1, selectedNode: null, flags: { discovery: true, callflow: true, mapping: true, deploy: true, testing: true, reports: true, audioMgmt: true, jiraInt: false, rollback: true, bulkOps: true, diffView: true, autoMap: true } };
+  state = { loggedIn: false, page: 'projects', connectTab: 'connector', selectedSource: null, adminTab: 'tenants', intTab: 'all', showIntConfig: false, configIntName: '', scenario: 'avaya-genesys', demoData: null, capabilities: null, flowView: 'source', zoom: 1, selectedNode: null, flags: { discovery: true, callflow: true, mapping: true, deploy: true, testing: true, reports: true, audioMgmt: true, jiraInt: false, rollback: true, bulkOps: true, diffView: true, autoMap: true } };
   handleLogin = () => this.setState({ loggedIn: true });
   goHome = () => this.setState({ page: 'projects' });
   nav = (p) => () => this.setState({ page: p });
@@ -1719,7 +1719,21 @@ class Component extends DCLogic {
   setAudioDecision = (i, d) => () => this.setState(s => { const a = { ...(s.audioDecisions || {}) }; a[i] = d; return { audioDecisions: a }; });
 
   componentDidMount() {
-    fetch('./data/demo-data.json').then(r => r.json()).then(d => this.setState({ demoData: d })).catch(() => {});
+    // Prefer the backend API (single-origin when served by the backend).
+    // Fall back to the bundled static dataset so the app still works when
+    // opened as plain files with no backend running.
+    const apply = (d) => this.setState({ demoData: d });
+    const fromStatic = () => fetch('./data/demo-data.json').then(r => r.json()).then(apply).catch(() => {});
+    fetch('/api/dataset')
+      .then(r => { if (!r.ok) throw new Error('api ' + r.status); return r.json(); })
+      .then(apply)
+      .catch(fromStatic);
+    // Report which secret-backed features the backend has configured (used to
+    // enable/disable LLM-convert and GitHub-deploy actions). Silent if offline.
+    fetch('/api/capabilities')
+      .then(r => r.ok ? r.json() : null)
+      .then(caps => { if (caps) this.setState({ capabilities: caps }); })
+      .catch(() => {});
   }
 
   renderVals() {
