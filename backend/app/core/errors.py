@@ -46,6 +46,28 @@ class UpstreamError(AppError):
     message = "Upstream provider error"
 
 
+class UnauthorizedError(AppError):
+    """Raised when a request has no/invalid/expired credentials."""
+
+    status_code = 401
+    message = "Authentication required"
+
+
+class ForbiddenError(AppError):
+    """Raised when an authenticated user isn't permitted to do this."""
+
+    status_code = 403
+    message = "Not permitted"
+
+
+class ConflictError(AppError):
+    """Raised when a request conflicts with existing state (e.g. duplicate
+    registration)."""
+
+    status_code = 409
+    message = "Conflicts with existing state"
+
+
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _handle_app_error(request: Request, exc: AppError) -> JSONResponse:

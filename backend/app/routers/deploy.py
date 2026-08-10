@@ -5,16 +5,18 @@ repo details; it never handles the token.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from ..models import DeployRequest, DeployResponse
+from ..models_db.user import User
 from ..services.github_deploy import commit_files
+from .auth import require_full_access
 
 router = APIRouter(prefix="/deploy", tags=["deploy"])
 
 
 @router.post("/github", response_model=DeployResponse)
-async def deploy_to_github(req: DeployRequest) -> DeployResponse:
+async def deploy_to_github(req: DeployRequest, _user: User = Depends(require_full_access)) -> DeployResponse:
     result = await commit_files(
         files=req.files,
         repository=req.repository,

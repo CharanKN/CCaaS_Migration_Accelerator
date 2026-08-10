@@ -16,6 +16,30 @@ client = TestClient(app)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _auth_headers(tag: str) -> dict:
+    email = f"{tag}@example.com"
+    client.post("/api/auth/register", json={"email": email, "password": "correct-horse"})
+    token = client.post("/api/auth/login", data={"username": email, "password": "correct-horse"}).json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _full_access_headers(tag: str) -> dict:
+    """Like _auth_headers, but promotes the account out of the default DEMO
+    role — for tests that exercise routes gated to non-demo roles."""
+    from app.database import SessionLocal
+    from app.models_db.user import Role, User
+
+    headers = _auth_headers(tag)
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == f"{tag}@example.com").first()
+        user.role = Role.MIGRATION_ENGINEER.value
+        db.commit()
+    finally:
+        db.close()
+    return headers
+
+
 def test_health():
     r = client.get("/api/health")
     assert r.status_code == 200
@@ -66,10 +90,14 @@ def test_sub_resources():
 
 
 def test_connect_demo_mode():
-    r = client.post("/api/connect", json={
-        "platform": "genesys-cloud",
-        "credentials": {"region": "mypurecloud.com", "secret": "should-not-echo"},
-    })
+    r = client.post(
+        "/api/connect",
+        json={
+            "platform": "genesys-cloud",
+            "credentials": {"region": "mypurecloud.com", "secret": "should-not-echo"},
+        },
+        headers=_full_access_headers("connect1"),
+    )
     assert r.status_code == 200
     body = r.json()
     assert body["connected"] is True
@@ -78,22 +106,41 @@ def test_connect_demo_mode():
 
 
 def test_discover_demo_mode():
-    r = client.post("/api/discover", params={"platform": "genesys-cloud", "scenario_id": "avaya-genesys"})
+    r = client.post(
+        "/api/discover",
+        params={"platform": "genesys-cloud", "scenario_id": "avaya-genesys"},
+        headers=_auth_headers("discover1"),
+    )
     assert r.status_code == 200
     assert r.json()["discovered"]
 
 
 def test_convert_guarded_without_key():
-    r = client.post("/api/convert", json={"scenario_id": "avaya-genesys"})
+    r = client.post(
+        "/api/convert",
+        json={"scenario_id": "avaya-genesys"},
+        headers=_auth_headers("convert1"),
+    )
     assert r.status_code == 503
 
 
 def test_deploy_guarded_without_token():
-    r = client.post("/api/deploy/github", json={"files": {"main.tf": "x"}})
+    r = client.post(
+        "/api/deploy/github",
+        json={"files": {"main.tf": "x"}},
+        headers=_full_access_headers("deploy1"),
+    )
     assert r.status_code == 503
+
+
+def test_connect_and_discover_require_auth():
+    assert client.post("/api/connect", json={"platform": "genesys-cloud"}).status_code == 401
+    assert client.post("/api/discover", params={"platform": "genesys-cloud"}).status_code == 401
+    assert client.post("/api/convert", json={"scenario_id": "avaya-genesys"}).status_code == 401
+    assert client.post("/api/deploy/github", json={"files": {"main.tf": "x"}}).status_code == 401
 
 
 def test_frontend_served_at_root():
     r = client.get("/")
     assert r.status_code == 200
-    assert "<!DOCTYPE html>" in r.text[:200]
+    assert "<!doctype html>" in r.text[:200].lower()

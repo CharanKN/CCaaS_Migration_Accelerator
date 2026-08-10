@@ -1,0 +1,80 @@
+/* Design tokens — exact values transcribed from the original CCaaS Migration
+   Suite .dc.html <helmet> <style> block and inline literals (see plan doc for
+   the verbatim source). Do not "simplify" these — pages depend on exact hex
+   matches, not an approximation. */
+:root {
+  /* Brand */
+  --brand: #e8612d;
+  --brand-gradient-end: #f59e0b;
+  --brand-dark: #d4551f;
+  --brand-deep: #c2410c; /* active nav/tab text */
+  --brand-shadow: rgba(232, 97, 45, 0.28);
+  --brand-tint-bg: #fff7ed;
+  --brand-tint-border: #fdba74;
+  --brand-tint-bg-hover: #ffedd5;
+
+  /* Named gradients, verbatim */
+  --gradient-cta: linear-gradient(135deg, #e8612d, #d4551f);
+  --gradient-hero: linear-gradient(135deg, #e8612d, #f59e0b);
+  --gradient-login-bg: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 40%, #252540 100%);
+  --gradient-help-banner: linear-gradient(135deg, #1a1a2e, #2d2d44);
+
+  /* Neutrals */
+  --navy: #1a1a2e;
+  --navy-deep: #0f0f1a; /* deploy log console background, distinct from navy */
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --border: #ebebef;
+  --border-input: #e5e7eb;
+  --divider: #f3f4f6;
+  --text-primary: #1a1a2e;
+  --text-secondary: #374151;
+  --text-tertiary: #6b7280;
+  --text-muted: #9ca3af;
+
+  /* Semantic status colors: fg / bg-tint / mid */
+  --status-good-fg: #065f46;
+  --status-good-bg: #d1fae5;
+  --status-good: #10b981;
+
+  --status-warn-fg: #92400e;
+  --status-warn-bg: #fef3c7;
+  --status-warn: #f59e0b;
+
+  --status-bad-fg: #dc2626;
+  --status-bad-bg: #fee2e2;
+  --status-bad: #ef4444;
+
+  --status-info-fg: #1d4ed8;
+  --status-info-bg: #dbeafe;
+  --status-info: #3b82f6;
+
+  --status-purple-fg: #6d28d9;
+  --status-purple-bg: #f5f3ff;
+  --status-purple: #8b5cf6;
+
+  /* Scale */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  /* Standard page container: padding: 28px 32px; animation: fadeIn 0.25s ease */
+  --page-padding: 28px 32px;
+
+  /* Shadows, verbatim */
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 2px 12px rgba(0, 0, 0, 0.04);
+  --shadow-cta: 0 2px 8px rgba(232, 97, 45, 0.25);
+  --shadow-cta-hover: 0 4px 14px rgba(232, 97, 45, 0.35);
+  --shadow-login-card: 0 24px 80px rgba(0, 0, 0, 0.4);
+  --shadow-login-cta: 0 4px 14px rgba(232, 97, 45, 0.3);
+  --shadow-login-cta-hover: 0 6px 20px rgba(232, 97, 45, 0.4);
+  --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.2);
+  --shadow-toggle-knob: 0 1px 3px rgba(0, 0, 0, 0.15);
+  --shadow-tab-active: 0 1px 3px rgba(0, 0, 0, 0.08);
+}

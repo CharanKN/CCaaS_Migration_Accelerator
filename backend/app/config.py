@@ -15,11 +15,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # backend/app/config.py -> parents[2] is the repository root.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# Frontend assets that already exist in the repo (kept, not moved).
-FRONTEND_HTML = REPO_ROOT / "CCaaS Migration Suite.dc.html"
-FRONTEND_SUPPORT_JS = REPO_ROOT / "support.js"
-DATA_DIR = REPO_ROOT / "data"
-DEMO_DATA_FILE = DATA_DIR / "demo-data.json"
+# Demo dataset backing DataStore (see services/data_store.py). The frontend's
+# own bundled copy under frontend/public/data/ is a separate offline fallback.
+DEMO_DATA_FILE = REPO_ROOT / "data" / "demo-data.json"
 
 
 class Settings(BaseSettings):
@@ -52,6 +50,25 @@ class Settings(BaseSettings):
     github_target_directory: str = "terraform"
     github_api_url: str = "https://api.github.com"
 
+    # --- Database ---
+    database_url: str = f"sqlite:///{REPO_ROOT / 'backend' / 'ccaas.db'}"
+
+    # --- JWT auth ---
+    jwt_secret_key: str = "dev-only-insecure-secret-change-me"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60
+
+    # --- Genesys Cloud connector ---
+    genesys_client_id: str | None = None
+    genesys_client_secret: str | None = None
+    genesys_region: str = "mypurecloud.com"
+
+    # --- Amazon Connect connector --- (falls back to boto3's default credential
+    # chain — instance role, shared config, env vars — when unset here)
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
+    aws_region: str = "us-east-1"
+
     # --- Derived feature flags (never expose the underlying secrets) ---
     @property
     def llm_enabled(self) -> bool:
@@ -60,6 +77,16 @@ class Settings(BaseSettings):
     @property
     def github_deploy_enabled(self) -> bool:
         return bool(self.github_token)
+
+    @property
+    def genesys_configured(self) -> bool:
+        return bool(self.genesys_client_id and self.genesys_client_secret)
+
+    @property
+    def aws_connect_configured(self) -> bool:
+        # boto3's default credential chain can supply creds even when these
+        # settings are unset, so this only reflects explicit server config.
+        return bool(self.aws_access_key_id and self.aws_secret_access_key)
 
     @property
     def cors_origin_list(self) -> list[str]:

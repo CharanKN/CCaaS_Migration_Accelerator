@@ -1,0 +1,995 @@
+{
+  "scenarios": {
+    "avaya-genesys": {
+      "name": "Acme IVR Migration",
+      "client": "Acme Financial Corp",
+      "source": "Avaya Aura",
+      "target": "Genesys Cloud",
+      "stage": "Mapping Phase",
+      "progress": 62,
+      "pipeline": {
+        "done": [
+          "connect",
+          "discover",
+          "analyze"
+        ],
+        "active": "map"
+      },
+      "gap": {
+        "auto": 184,
+        "review": 23,
+        "unsupported": 7,
+        "complexity": "7.2"
+      },
+      "discovered": [
+        {
+          "label": "IVR Call Flows (Vectors)",
+          "count": 8,
+          "status": "Parsed"
+        },
+        {
+          "label": "Audio Prompts (Announcements)",
+          "count": 147,
+          "status": "Parsed"
+        },
+        {
+          "label": "Queues (Skills/Splits)",
+          "count": 24,
+          "status": "Parsed"
+        },
+        {
+          "label": "Skills (EAS)",
+          "count": 18,
+          "status": "Parsed"
+        },
+        {
+          "label": "DNIS / VDNs",
+          "count": 12,
+          "status": "Parsed"
+        },
+        {
+          "label": "Holiday Tables",
+          "count": 5,
+          "status": "1 Warning"
+        }
+      ],
+      "inventory": [
+        {
+          "name": "Main IVR — Customer Service",
+          "id": "VDN-44801",
+          "type": "Vector",
+          "complexity": "High",
+          "cpct": 85,
+          "deps": "12 prompts, 4 skills",
+          "status": "Auto-mapped"
+        },
+        {
+          "name": "Sales Inquiry Vector",
+          "id": "VDN-44802",
+          "type": "Vector",
+          "complexity": "Med",
+          "cpct": 55,
+          "deps": "8 prompts, 2 skills",
+          "status": "Auto-mapped"
+        },
+        {
+          "name": "Payment Processing (Adjunct)",
+          "id": "VDN-44810",
+          "type": "Vector",
+          "complexity": "High",
+          "cpct": 90,
+          "deps": "6 prompts, ASAI link",
+          "status": "Review"
+        },
+        {
+          "name": "General_Split_1",
+          "id": "SPL-001",
+          "type": "Skill/Split",
+          "complexity": "Low",
+          "cpct": 20,
+          "deps": "3 agents groups",
+          "status": "Auto-mapped"
+        },
+        {
+          "name": "VIP_EAS_Skill",
+          "id": "SK-004",
+          "type": "Skill",
+          "complexity": "Med",
+          "cpct": 50,
+          "deps": "2 splits",
+          "status": "Review"
+        },
+        {
+          "name": "CRM_DataDip (ASAI)",
+          "id": "ADJ-001",
+          "type": "Adjunct Route",
+          "complexity": "High",
+          "cpct": 95,
+          "deps": "External CTI",
+          "status": "Unsupported"
+        }
+      ],
+      "mappings": [
+        {
+          "sName": "Main_IVR_v3",
+          "sType": "Avaya Vector",
+          "tName": "Architect Inbound Flow",
+          "tType": "GC Flow",
+          "score": 95,
+          "status": "Mapped"
+        },
+        {
+          "sName": "General_Split_1",
+          "sType": "Avaya Split",
+          "tName": "General Queue",
+          "tType": "GC Queue",
+          "score": 98,
+          "status": "Mapped"
+        },
+        {
+          "sName": "ann_welcome_44801.wav",
+          "sType": "Announcement",
+          "tName": "welcome_prompt",
+          "tType": "GC Prompt",
+          "score": 100,
+          "status": "Mapped"
+        },
+        {
+          "sName": "VIP_EAS_Skill",
+          "sType": "Avaya Skill",
+          "tName": "VIP Skill",
+          "tType": "GC ACD Skill",
+          "score": 72,
+          "status": "Review"
+        },
+        {
+          "sName": "HolidayTable_03",
+          "sType": "Holiday Table",
+          "tName": "Holiday Schedule Group",
+          "tType": "GC Schedule",
+          "score": 88,
+          "status": "Mapped"
+        },
+        {
+          "sName": "CRM_DataDip (ASAI)",
+          "sType": "Adjunct Route",
+          "tName": "No equivalent — Data Action rebuild",
+          "tType": "Custom build",
+          "score": 15,
+          "status": "Conflict"
+        }
+      ],
+      "deployLogs": [
+        {
+          "t": "14:23:01",
+          "ok": true,
+          "msg": "Connection to Genesys Cloud (mypurecloud.com) established"
+        },
+        {
+          "t": "14:23:03",
+          "ok": true,
+          "msg": "Validating target org configuration..."
+        },
+        {
+          "t": "14:23:05",
+          "ok": true,
+          "msg": "Deploying queues (12/12 complete)"
+        },
+        {
+          "t": "14:23:08",
+          "ok": true,
+          "msg": "Deploying ACD skills & wrap-up codes (34/34)"
+        },
+        {
+          "t": "14:23:12",
+          "ok": false,
+          "msg": "Deploying Architect flows... (3/8)"
+        }
+      ],
+      "tests": [
+        {
+          "name": "Main Menu → Sales",
+          "id": "TC-001",
+          "input": "DTMF: 1",
+          "expected": "Route to Sales Queue",
+          "latency": "230ms",
+          "result": "Pass"
+        },
+        {
+          "name": "Main Menu → Support",
+          "id": "TC-002",
+          "input": "DTMF: 2",
+          "expected": "Route to Support",
+          "latency": "210ms",
+          "result": "Pass"
+        },
+        {
+          "name": "Invalid Input Retry",
+          "id": "TC-003",
+          "input": "DTMF: 9",
+          "expected": "Replay menu prompt",
+          "latency": "180ms",
+          "result": "Pass"
+        },
+        {
+          "name": "Payment IVR Auth",
+          "id": "TC-004",
+          "input": "Speech: \"pay bill\"",
+          "expected": "Auth then balance",
+          "latency": "890ms",
+          "result": "Fail"
+        },
+        {
+          "name": "After Hours Routing",
+          "id": "TC-005",
+          "input": "Call at 22:00",
+          "expected": "Voicemail prompt",
+          "latency": "310ms",
+          "result": "Pass"
+        },
+        {
+          "name": "VIP Caller Detection",
+          "id": "TC-006",
+          "input": "ANI: +1-555-0142",
+          "expected": "Priority queue",
+          "latency": "520ms",
+          "result": "Warning"
+        }
+      ],
+      "architecture": {
+        "sourceComponents": [
+          {
+            "name": "Communication Manager",
+            "type": "Core PBX / ACD",
+            "objects": "24 splits, 18 skills"
+          },
+          {
+            "name": "Avaya Aura AES",
+            "type": "CTI / ASAI Adjunct",
+            "objects": "1 CRM data dip"
+          },
+          {
+            "name": "Announcement Board",
+            "type": "Audio Storage",
+            "objects": "147 .wav prompts"
+          },
+          {
+            "name": "CMS R18",
+            "type": "Reporting",
+            "objects": "36 custom reports"
+          }
+        ],
+        "targetComponents": [
+          {
+            "name": "Genesys Cloud Architect",
+            "type": "Flow Engine",
+            "objects": "8 inbound flows"
+          },
+          {
+            "name": "GC Routing",
+            "type": "Queues & Skills",
+            "objects": "24 queues, 18 skills"
+          },
+          {
+            "name": "GC Prompt Library",
+            "type": "Audio Storage",
+            "objects": "147 prompts"
+          },
+          {
+            "name": "Data Actions",
+            "type": "Integrations",
+            "objects": "1 REST rebuild"
+          }
+        ]
+      }
+    },
+    "cisco-connect": {
+      "name": "TeleCorp Cloud Migration",
+      "client": "TeleCorp Insurance",
+      "source": "Cisco UCCE",
+      "target": "Amazon Connect",
+      "stage": "Discovery Phase",
+      "progress": 35,
+      "pipeline": {
+        "done": [
+          "connect"
+        ],
+        "active": "discover"
+      },
+      "gap": {
+        "auto": 96,
+        "review": 41,
+        "unsupported": 12,
+        "complexity": "8.1"
+      },
+      "discovered": [
+        {
+          "label": "ICM Routing Scripts",
+          "count": 12,
+          "status": "Parsed"
+        },
+        {
+          "label": "CVP VXML Applications",
+          "count": 6,
+          "status": "Parsing..."
+        },
+        {
+          "label": "Skill Groups",
+          "count": 31,
+          "status": "Parsed"
+        },
+        {
+          "label": "Precision Queues",
+          "count": 9,
+          "status": "2 Warnings"
+        },
+        {
+          "label": "Dialed Numbers / Call Types",
+          "count": 28,
+          "status": "Parsed"
+        },
+        {
+          "label": "Finesse Layouts",
+          "count": 4,
+          "status": "Parsed"
+        }
+      ],
+      "inventory": [
+        {
+          "name": "MainRouting_v12",
+          "id": "ICMS-001",
+          "type": "ICM Script",
+          "complexity": "High",
+          "cpct": 88,
+          "deps": "6 skill groups, 2 CVP apps",
+          "status": "Review"
+        },
+        {
+          "name": "ClaimsIntake_CVP",
+          "id": "CVP-002",
+          "type": "VXML App",
+          "complexity": "High",
+          "cpct": 92,
+          "deps": "Custom Java, DB dip",
+          "status": "Unsupported"
+        },
+        {
+          "name": "SG_Claims_Tier1",
+          "id": "SG-101",
+          "type": "Skill Group",
+          "complexity": "Low",
+          "cpct": 18,
+          "deps": "2 teams",
+          "status": "Auto-mapped"
+        },
+        {
+          "name": "PQ_Adjusters_Senior",
+          "id": "PQ-04",
+          "type": "Precision Queue",
+          "complexity": "Med",
+          "cpct": 60,
+          "deps": "4 attributes",
+          "status": "Review"
+        },
+        {
+          "name": "CT_Claims_Inbound",
+          "id": "CT-220",
+          "type": "Call Type",
+          "complexity": "Low",
+          "cpct": 15,
+          "deps": "1 script",
+          "status": "Auto-mapped"
+        },
+        {
+          "name": "Finesse_ClaimsLayout",
+          "id": "FIN-01",
+          "type": "Desktop Layout",
+          "complexity": "Med",
+          "cpct": 45,
+          "deps": "3 gadgets",
+          "status": "Review"
+        }
+      ],
+      "mappings": [
+        {
+          "sName": "MainRouting_v12",
+          "sType": "ICM Script",
+          "tName": "Inbound Contact Flow",
+          "tType": "Connect Flow",
+          "score": 81,
+          "status": "Review"
+        },
+        {
+          "sName": "SG_Claims_Tier1",
+          "sType": "Skill Group",
+          "tName": "Claims Queue + Routing Profile",
+          "tType": "Connect Queue",
+          "score": 94,
+          "status": "Mapped"
+        },
+        {
+          "sName": "PQ_Adjusters_Senior",
+          "sType": "Precision Queue",
+          "tName": "Routing Profile + Attributes",
+          "tType": "Connect Profile",
+          "score": 63,
+          "status": "Review"
+        },
+        {
+          "sName": "ClaimsIntake_CVP",
+          "sType": "VXML App",
+          "tName": "Lambda + Lex bot rebuild",
+          "tType": "Custom build",
+          "score": 22,
+          "status": "Conflict"
+        },
+        {
+          "sName": "CT_Claims_Inbound",
+          "sType": "Call Type",
+          "tName": "Contact Attribute",
+          "tType": "Connect Attribute",
+          "score": 90,
+          "status": "Mapped"
+        },
+        {
+          "sName": "prompt_claims_greeting.wav",
+          "sType": "CVP Audio",
+          "tName": "S3 prompt asset",
+          "tType": "S3 Prompt",
+          "score": 100,
+          "status": "Mapped"
+        }
+      ],
+      "deployLogs": [
+        {
+          "t": "09:12:44",
+          "ok": true,
+          "msg": "AWS STS session established (us-east-1)"
+        },
+        {
+          "t": "09:12:47",
+          "ok": true,
+          "msg": "Connect instance validated: telecorp-uat"
+        },
+        {
+          "t": "09:12:52",
+          "ok": true,
+          "msg": "Creating queues (14/14) and routing profiles (9/9)"
+        },
+        {
+          "t": "09:13:03",
+          "ok": true,
+          "msg": "Uploading prompts to S3 (82/82)"
+        },
+        {
+          "t": "09:13:10",
+          "ok": false,
+          "msg": "Creating contact flows... ARN remapping (5/12)"
+        }
+      ],
+      "tests": [
+        {
+          "name": "Claims Intake → Tier1",
+          "id": "TC-101",
+          "input": "DTMF: 1-2",
+          "expected": "Route to Claims Queue",
+          "latency": "260ms",
+          "result": "Pass"
+        },
+        {
+          "name": "Policy Lookup Data Dip",
+          "id": "TC-102",
+          "input": "Speech: policy number",
+          "expected": "Lambda returns policy",
+          "latency": "1240ms",
+          "result": "Fail"
+        },
+        {
+          "name": "Senior Adjuster Routing",
+          "id": "TC-103",
+          "input": "Priority attribute",
+          "expected": "Routing profile match",
+          "latency": "340ms",
+          "result": "Pass"
+        },
+        {
+          "name": "After Hours",
+          "id": "TC-104",
+          "input": "Call at 21:30",
+          "expected": "Closed message + callback",
+          "latency": "290ms",
+          "result": "Pass"
+        }
+      ],
+      "architecture": {
+        "sourceComponents": [
+          {
+            "name": "ICM Router/Logger",
+            "type": "Routing Core",
+            "objects": "12 scripts, 28 DNs"
+          },
+          {
+            "name": "CVP + VXML Gateway",
+            "type": "IVR / Self-Service",
+            "objects": "6 VXML apps"
+          },
+          {
+            "name": "CUCM",
+            "type": "Telephony",
+            "objects": "CTI ports, route points"
+          },
+          {
+            "name": "Finesse + CUIC",
+            "type": "Desktop & Reporting",
+            "objects": "4 layouts, 22 reports"
+          }
+        ],
+        "targetComponents": [
+          {
+            "name": "Amazon Connect Instance",
+            "type": "CCaaS Core",
+            "objects": "12 contact flows"
+          },
+          {
+            "name": "AWS Lambda",
+            "type": "Data Dips / Logic",
+            "objects": "3 functions"
+          },
+          {
+            "name": "Amazon Lex",
+            "type": "Speech / NLU",
+            "objects": "2 bots"
+          },
+          {
+            "name": "S3 + Contact Lens",
+            "type": "Storage & Analytics",
+            "objects": "82 prompts"
+          }
+        ]
+      }
+    },
+    "engage-genesys": {
+      "name": "GlobalBank Modernization",
+      "client": "GlobalBank Holdings",
+      "source": "Genesys Engage",
+      "target": "Genesys Cloud",
+      "stage": "Cutover Complete",
+      "progress": 100,
+      "pipeline": {
+        "done": [
+          "connect",
+          "discover",
+          "analyze",
+          "map",
+          "convert",
+          "deploy",
+          "test",
+          "cutover"
+        ],
+        "active": null
+      },
+      "gap": {
+        "auto": 142,
+        "review": 11,
+        "unsupported": 2,
+        "complexity": "5.4"
+      },
+      "discovered": [
+        {
+          "label": "IRD Routing Strategies",
+          "count": 5,
+          "status": "Parsed"
+        },
+        {
+          "label": "GVP VXML Apps",
+          "count": 3,
+          "status": "Parsed"
+        },
+        {
+          "label": "Virtual Queues",
+          "count": 16,
+          "status": "Parsed"
+        },
+        {
+          "label": "Skills",
+          "count": 22,
+          "status": "Parsed"
+        },
+        {
+          "label": "DNs / Route Points",
+          "count": 19,
+          "status": "Parsed"
+        },
+        {
+          "label": "Business Hours Objects",
+          "count": 4,
+          "status": "Parsed"
+        }
+      ],
+      "inventory": [
+        {
+          "name": "Retail_Inbound_Strategy",
+          "id": "IRD-01",
+          "type": "IRD Strategy",
+          "complexity": "Med",
+          "cpct": 58,
+          "deps": "4 VQs, 8 skills",
+          "status": "Auto-mapped"
+        },
+        {
+          "name": "Wealth_Priority_Strategy",
+          "id": "IRD-02",
+          "type": "IRD Strategy",
+          "complexity": "High",
+          "cpct": 80,
+          "deps": "URS custom func",
+          "status": "Review"
+        },
+        {
+          "name": "VQ_Retail_General",
+          "id": "VQ-001",
+          "type": "Virtual Queue",
+          "complexity": "Low",
+          "cpct": 12,
+          "deps": "—",
+          "status": "Auto-mapped"
+        },
+        {
+          "name": "GVP_Balance_App",
+          "id": "GVP-01",
+          "type": "VXML App",
+          "complexity": "Med",
+          "cpct": 62,
+          "deps": "Host DB dip",
+          "status": "Auto-mapped"
+        }
+      ],
+      "mappings": [
+        {
+          "sName": "Retail_Inbound_Strategy",
+          "sType": "IRD Strategy",
+          "tName": "Architect Inbound Flow",
+          "tType": "GC Flow",
+          "score": 91,
+          "status": "Mapped"
+        },
+        {
+          "sName": "VQ_Retail_General",
+          "sType": "Virtual Queue",
+          "tName": "Retail General Queue",
+          "tType": "GC Queue",
+          "score": 99,
+          "status": "Mapped"
+        },
+        {
+          "sName": "Wealth_Priority_Strategy",
+          "sType": "IRD Strategy",
+          "tName": "Architect flow + custom logic",
+          "tType": "GC Flow",
+          "score": 68,
+          "status": "Review"
+        },
+        {
+          "sName": "GVP_Balance_App",
+          "sType": "VXML App",
+          "tName": "Secure Flow + Data Action",
+          "tType": "GC Secure Flow",
+          "score": 84,
+          "status": "Mapped"
+        }
+      ],
+      "deployLogs": [
+        {
+          "t": "11:02:10",
+          "ok": true,
+          "msg": "Deployment v3.1 completed — all 5 flows live in PROD"
+        },
+        {
+          "t": "11:02:14",
+          "ok": true,
+          "msg": "DNIS cutover: 19/19 numbers repointed"
+        },
+        {
+          "t": "11:02:18",
+          "ok": true,
+          "msg": "Regression suite: 38/38 tests passed"
+        },
+        {
+          "t": "11:02:25",
+          "ok": true,
+          "msg": "Cutover sign-off recorded — project complete"
+        }
+      ],
+      "tests": [
+        {
+          "name": "Retail Main Menu",
+          "id": "TC-201",
+          "input": "DTMF: 1",
+          "expected": "Retail queue",
+          "latency": "190ms",
+          "result": "Pass"
+        },
+        {
+          "name": "Wealth VIP Routing",
+          "id": "TC-202",
+          "input": "ANI match",
+          "expected": "Priority skill route",
+          "latency": "220ms",
+          "result": "Pass"
+        },
+        {
+          "name": "Balance IVR (Secure)",
+          "id": "TC-203",
+          "input": "DTMF: acct + PIN",
+          "expected": "Balance readback",
+          "latency": "410ms",
+          "result": "Pass"
+        }
+      ],
+      "architecture": {
+        "sourceComponents": [
+          {
+            "name": "SIP Server / URS / ORS",
+            "type": "Routing Core",
+            "objects": "5 strategies"
+          },
+          {
+            "name": "GVP",
+            "type": "IVR / Self-Service",
+            "objects": "3 VXML apps"
+          },
+          {
+            "name": "Config Server (GAX)",
+            "type": "Configuration",
+            "objects": "19 DNs, 22 skills"
+          },
+          {
+            "name": "Stat Server / GIM",
+            "type": "Reporting",
+            "objects": "14 stat defs"
+          }
+        ],
+        "targetComponents": [
+          {
+            "name": "Genesys Cloud Architect",
+            "type": "Flow Engine",
+            "objects": "5 flows"
+          },
+          {
+            "name": "GC Routing",
+            "type": "Queues & Skills",
+            "objects": "16 queues, 22 skills"
+          },
+          {
+            "name": "GC Data Actions",
+            "type": "Integrations",
+            "objects": "2 REST actions"
+          },
+          {
+            "name": "GC Analytics",
+            "type": "Reporting",
+            "objects": "Native dashboards"
+          }
+        ]
+      }
+    },
+    "mitel-twilio": {
+      "name": "RetailMax Omnichannel",
+      "client": "RetailMax Corp",
+      "source": "Mitel MiCC",
+      "target": "Twilio Flex",
+      "stage": "Pending Approval",
+      "progress": 15,
+      "pipeline": {
+        "done": [
+          "connect"
+        ],
+        "active": "discover"
+      },
+      "gap": {
+        "auto": 34,
+        "review": 28,
+        "unsupported": 18,
+        "complexity": "8.8"
+      },
+      "discovered": [
+        {
+          "label": "MiCC IVR Flows",
+          "count": 3,
+          "status": "Parsed"
+        },
+        {
+          "label": "Audio Prompts",
+          "count": 41,
+          "status": "Parsed"
+        },
+        {
+          "label": "Workgroups / Queues",
+          "count": 11,
+          "status": "Parsed"
+        },
+        {
+          "label": "Agent Skills",
+          "count": 9,
+          "status": "2 Warnings"
+        },
+        {
+          "label": "DNIS Numbers",
+          "count": 6,
+          "status": "Parsed"
+        },
+        {
+          "label": "Schedules",
+          "count": 3,
+          "status": "Parsed"
+        }
+      ],
+      "inventory": [
+        {
+          "name": "Retail_Main_IVR",
+          "id": "MICC-01",
+          "type": "IVR Flow",
+          "complexity": "Med",
+          "cpct": 60,
+          "deps": "12 prompts, 4 workgroups",
+          "status": "Review"
+        },
+        {
+          "name": "Order_Status_Flow",
+          "id": "MICC-02",
+          "type": "IVR Flow",
+          "complexity": "High",
+          "cpct": 82,
+          "deps": "Order API dip",
+          "status": "Unsupported"
+        },
+        {
+          "name": "WG_Retail_Support",
+          "id": "WG-01",
+          "type": "Queue",
+          "complexity": "Low",
+          "cpct": 22,
+          "deps": "3 skills",
+          "status": "Auto-mapped"
+        },
+        {
+          "name": "Skill_Returns",
+          "id": "SK-03",
+          "type": "Skill",
+          "complexity": "Low",
+          "cpct": 25,
+          "deps": "2 workgroups",
+          "status": "Auto-mapped"
+        }
+      ],
+      "mappings": [
+        {
+          "sName": "Retail_Main_IVR",
+          "sType": "MiCC IVR Flow",
+          "tName": "Studio Flow (rebuild)",
+          "tType": "Twilio Studio",
+          "score": 55,
+          "status": "Review"
+        },
+        {
+          "sName": "WG_Retail_Support",
+          "sType": "Workgroup",
+          "tName": "Retail Support TaskQueue",
+          "tType": "TaskRouter Queue",
+          "score": 92,
+          "status": "Mapped"
+        },
+        {
+          "sName": "Skill_Returns",
+          "sType": "Agent Skill",
+          "tName": "Worker attribute: returns",
+          "tType": "Worker Attribute",
+          "score": 88,
+          "status": "Mapped"
+        },
+        {
+          "sName": "Order_Status_Flow",
+          "sType": "IVR + API dip",
+          "tName": "Studio + Twilio Function",
+          "tType": "Custom build",
+          "score": 28,
+          "status": "Conflict"
+        }
+      ],
+      "deployLogs": [
+        {
+          "t": "10:05:12",
+          "ok": true,
+          "msg": "Twilio API credentials validated (ACxxxx)"
+        },
+        {
+          "t": "10:05:15",
+          "ok": true,
+          "msg": "TaskRouter workspace created: RetailMax-UAT"
+        },
+        {
+          "t": "10:05:19",
+          "ok": true,
+          "msg": "TaskQueues provisioned (11/11)"
+        },
+        {
+          "t": "10:05:24",
+          "ok": false,
+          "msg": "Deploying Studio Flows... (1/3)"
+        }
+      ],
+      "tests": [
+        {
+          "name": "Main Menu → Support",
+          "id": "TC-301",
+          "input": "DTMF: 2",
+          "expected": "Route to Support TaskQueue",
+          "latency": "310ms",
+          "result": "Pass"
+        },
+        {
+          "name": "Order Status Lookup",
+          "id": "TC-302",
+          "input": "Speech: order number",
+          "expected": "Function returns status",
+          "latency": "—",
+          "result": "Fail"
+        },
+        {
+          "name": "Returns Routing",
+          "id": "TC-303",
+          "input": "DTMF: 3",
+          "expected": "Worker attr match: returns",
+          "latency": "280ms",
+          "result": "Pass"
+        }
+      ],
+      "architecture": {
+        "sourceComponents": [
+          {
+            "name": "MiContact Center",
+            "type": "ACD / Routing",
+            "objects": "11 workgroups"
+          },
+          {
+            "name": "MiCC IVR",
+            "type": "Self-Service",
+            "objects": "3 flows"
+          },
+          {
+            "name": "MiVoice Business",
+            "type": "Telephony",
+            "objects": "6 DNIS"
+          },
+          {
+            "name": "Order API (custom)",
+            "type": "Integration",
+            "objects": "1 data dip"
+          }
+        ],
+        "targetComponents": [
+          {
+            "name": "Twilio Studio",
+            "type": "Flow Builder",
+            "objects": "3 flows (rebuild)"
+          },
+          {
+            "name": "TaskRouter",
+            "type": "Routing",
+            "objects": "11 queues, workers"
+          },
+          {
+            "name": "Twilio Numbers",
+            "type": "Telephony",
+            "objects": "6 numbers"
+          },
+          {
+            "name": "Twilio Functions",
+            "type": "Serverless Logic",
+            "objects": "2 functions"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -19,12 +19,18 @@ from . import __version__
 from .config import get_settings
 from .core.errors import register_error_handlers
 from .core.logging import configure_logging, get_logger
+from .database import init_db
 from .routers import api_router
 from .static import mount_frontend
 
 settings = get_settings()
 configure_logging(settings.log_level)
 log = get_logger("main")
+
+
+# Idempotent (CREATE TABLE IF NOT EXISTS semantics) — run at import time so
+# tables exist even under test clients that don't drive ASGI lifespan events.
+init_db()
 
 
 @asynccontextmanager

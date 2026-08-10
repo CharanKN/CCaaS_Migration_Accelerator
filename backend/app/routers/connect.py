@@ -6,10 +6,12 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from ..models_db.user import User
 from ..services.connectors import get_connector
+from .auth import require_full_access
 
 router = APIRouter(prefix="/connect", tags=["connect"])
 
@@ -21,7 +23,7 @@ class ConnectRequest(BaseModel):
 
 
 @router.post("")
-async def connect(req: ConnectRequest) -> dict:
+async def connect(req: ConnectRequest, _user: User = Depends(require_full_access)) -> dict:
     connector = get_connector(req.platform)
     result = await connector.connect(req.credentials)
     return asdict(result)

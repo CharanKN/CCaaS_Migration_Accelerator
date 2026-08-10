@@ -27,4 +27,6 @@ def capabilities() -> dict:
         "llm": s.llm_enabled,
         "githubDeploy": s.github_deploy_enabled,
         "model": s.openrouter_model if s.llm_enabled else None,
+        "genesysCloud": s.genesys_configured,
+        "amazonConnect": s.aws_connect_configured,
     }

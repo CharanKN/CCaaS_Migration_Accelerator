@@ -7,18 +7,20 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from ..config import get_settings
 from ..models import ConvertRequest, ConvertResponse
+from ..models_db.user import User
 from ..services.data_store import data_store
 from ..services.openrouter import generate_artifact
+from .auth import get_current_user
 
 router = APIRouter(prefix="/convert", tags=["convert"])
 
 
 @router.post("", response_model=ConvertResponse)
-async def convert(req: ConvertRequest) -> ConvertResponse:
+async def convert(req: ConvertRequest, _user: User = Depends(get_current_user)) -> ConvertResponse:
     settings = get_settings()
     scenario = data_store.get_scenario(req.scenario_id)  # 404 if unknown
     target = req.target or scenario.target or "Genesys Cloud"
