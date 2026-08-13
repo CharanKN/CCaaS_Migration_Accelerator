@@ -27,13 +27,20 @@ export function TopBar({ breadcrumbs }: { breadcrumbs: BreadcrumbItem[] }) {
           onClick={() => navigate('/')}
           style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: 8 }}
         >
-          <span className="material-icons-outlined" style={{ color: 'var(--brand)' }}>
+          {/* <span className="material-icons-outlined" style={{ color: 'var(--brand)' }}>
             hub
-          </span>
+          </span> */}
+          <div style={{width: 30, height: 30, background: 'linear-gradient(135deg, #E8612D, #F59E0B)', borderRadius: 7.5, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+          <span style={{color: '#fff', fontWeight: 700, fontSize: 10, letterSpacing: -0.5}}> EXL </span>
+          </div>
           <span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>Migration Suite</span>
         </button>
+        <div style={{width: 1, height: 20, background: 'rgba(255,255,255,0.12)', margin: '0 6'}}></div>
         <Breadcrumbs items={breadcrumbs} dark />
-        <span
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+         <span
           style={{
             fontSize: 10,
             fontWeight: 700,
@@ -45,9 +52,6 @@ export function TopBar({ breadcrumbs }: { breadcrumbs: BreadcrumbItem[] }) {
         >
           PROD
         </span>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <button
           onClick={() => showToast("Organization switching isn't available in this demo tenant.")}
           style={{

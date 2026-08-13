@@ -21,12 +21,14 @@ export function AppShell() {
       ? [{ label: 'Projects' }]
       : [{ label: 'Projects', to: '/' }, { label: currentLabel }];
 
+  // Top bar spans the full window width (matches the original .dc.html shell);
+  // the sidebar + content row sits below it, not beside it.
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
-      <SideNav />
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-        <TopBar breadcrumbs={breadcrumbs} />
-        <main className="page-enter" style={{ flex: 1, overflowY: 'auto', padding: 'var(--page-padding)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <TopBar breadcrumbs={breadcrumbs} />
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        <SideNav />
+        <main className="page-enter" style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: 'var(--page-padding)' }}>
           <Outlet />
         </main>
       </div>

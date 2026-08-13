@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from . import auth, connect, convert, dataset, deploy, discover, health, scenarios
+from . import auth, connect, convert, dataset, deploy, discover, health, scenarios, upload
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(health.router)
@@ -12,5 +12,6 @@ api_router.include_router(dataset.router)
 api_router.include_router(scenarios.router)
 api_router.include_router(connect.router)
 api_router.include_router(discover.router)
+api_router.include_router(upload.router)
 api_router.include_router(convert.router)
 api_router.include_router(deploy.router)

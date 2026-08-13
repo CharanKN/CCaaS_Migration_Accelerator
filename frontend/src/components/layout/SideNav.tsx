@@ -17,8 +17,9 @@ export function SideNav() {
       style={{
         width: collapsed ? 60 : 220,
         flexShrink: 0,
-        background: 'var(--navy)',
-        color: '#fff',
+        background: 'var(--surface)',
+        borderRight: '1px solid var(--border)',
+        color: 'var(--text-primary)',
         display: 'flex',
         flexDirection: 'column',
         transition: 'width 0.15s ease',
@@ -33,7 +34,6 @@ export function SideNav() {
           justifyContent: collapsed ? 'center' : 'space-between',
         }}
       >
-        {!collapsed && <span style={{ fontWeight: 800, fontSize: 14 }}>CCaaS Suite</span>}
         <button
           onClick={() => setCollapsed((c) => !c)}
           style={{ background: 'none', border: 'none', color: '#9CA3AF' }}
@@ -49,11 +49,12 @@ export function SideNav() {
             {!collapsed && (
               <div
                 style={{
-                  padding: '4px 16px',
+                  padding: '18px 12px 6px',
                   fontSize: 10,
-                  letterSpacing: 0.6,
+                  fontWeight: 700,
+                  letterSpacing: 1.2,
                   textTransform: 'uppercase',
-                  color: '#6B7280',
+                  color: '#A0A0B0',
                 }}
               >
                 {group.title}
@@ -96,8 +97,10 @@ export function SideNav() {
                               fontWeight: 700,
                               padding: '1px 6px',
                               borderRadius: 8,
-                              background: isActive ? 'var(--brand)' : '#374151',
-                              color: '#fff',
+                              minWidth: 18,
+                              textAlign: 'center',
+                              background: '#FEE2E2',
+                              color: '#DC2626',
                             }}
                           >
                             {item.badge}
@@ -113,29 +116,31 @@ export function SideNav() {
         ))}
       </div>
 
-      <button
-        onClick={() => showToast('Opening Help & Docs…')}
-        style={{
-          margin: 8,
-          padding: '10px 12px',
-          borderRadius: 'var(--radius-md)',
-          background: 'var(--brand-tint-bg)',
-          border: 'none',
-          color: 'var(--brand-deep)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          gap: 8,
-          fontSize: 12,
-          fontWeight: 600,
-        }}
-        title="Help & Docs"
-      >
-        <span className="material-icons-outlined" style={{ fontSize: 18 }}>
-          help_outline
-        </span>
-        {!collapsed && 'Help & Docs'}
-      </button>
+      <div style={{ padding: 10, borderTop: '1px solid var(--divider)' }}>
+        <button
+          onClick={() => showToast('Opening Help & Docs…')}
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--brand-tint-bg)',
+            border: 'none',
+            color: 'var(--brand-deep)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: 8,
+            fontSize: 12,
+            fontWeight: 600,
+          }}
+          title="Help & Docs"
+        >
+          <span className="material-icons-outlined" style={{ fontSize: 17, color: 'var(--brand)' }}>
+            help_outline
+          </span>
+          {!collapsed && 'Help & Docs'}
+        </button>
+      </div>
     </nav>
   );
 }

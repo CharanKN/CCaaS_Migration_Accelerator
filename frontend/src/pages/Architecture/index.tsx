@@ -42,7 +42,7 @@ function ColumnPill({ label }: { label: string }) {
   );
 }
 
-function ComponentTile({ label, variant }: { label: string; variant: 'source' | 'target' }) {
+function ComponentTile({ label, detail, variant }: { label: string; detail?: string | null; variant: 'source' | 'target' }) {
   const styles =
     variant === 'source'
       ? { background: '#FAFAFA', border: '1px solid #EBEBEF' }
@@ -59,7 +59,8 @@ function ComponentTile({ label, variant }: { label: string; variant: 'source' | 
         textAlign: 'center',
       }}
     >
-      {label}
+      <div>{label}</div>
+      {detail && <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-tertiary)', marginTop: 2 }}>{detail}</div>}
     </div>
   );
 }
@@ -116,7 +117,9 @@ export default function Architecture() {
               {sourceComponents.length === 0 ? (
                 <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: 0 }}>No source components discovered yet.</p>
               ) : (
-                sourceComponents.map((c) => <ComponentTile key={c} label={c} variant="source" />)
+                sourceComponents.map((c) => (
+                  <ComponentTile key={c.name} label={c.name} detail={[c.type, c.objects].filter(Boolean).join(' — ')} variant="source" />
+                ))
               )}
             </div>
           </div>
@@ -157,7 +160,9 @@ export default function Architecture() {
               {targetComponents.length === 0 ? (
                 <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: 0 }}>No target components discovered yet.</p>
               ) : (
-                targetComponents.map((c) => <ComponentTile key={c} label={c} variant="target" />)
+                targetComponents.map((c) => (
+                  <ComponentTile key={c.name} label={c.name} detail={[c.type, c.objects].filter(Boolean).join(' — ')} variant="target" />
+                ))
               )}
             </div>
           </div>

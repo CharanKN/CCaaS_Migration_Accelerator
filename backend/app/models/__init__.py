@@ -12,4 +12,5 @@ from .schemas import (  # noqa: F401
     Scenario,
     ScenarioSummary,
     TestCase,
+    UploadResult,
 )

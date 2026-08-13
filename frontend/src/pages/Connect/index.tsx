@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/Button';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../components/ToastContext';
 import { api, ApiError } from '../../api/client';
-import type { ConnectionResult, DiscoverResult } from '../../types/scenario';
+import type { ConnectionResult, DiscoverResult, UploadResult } from '../../types/scenario';
 
 interface Platform {
   id: string;
@@ -63,26 +63,74 @@ const SME_FIELDS_DEFAULT: SmeField[] = [
   { label: 'Export Files', placeholder: 'Upload config exports', hint: 'Platform-native export formats', required: false },
 ];
 
-// Verbatim `uploadedFiles` fallback.
-const UPLOADED_FILES = [
-  { name: 'avaya_ivr_export.xml', size: '2.4 MB', type: 'XML Call Flow', icon: 'description', iconColor: '#E8612D', status: 'Parsed', colors: ['#D1FAE5', '#065F46'] as [string, string] },
-  { name: 'prompts_bundle.zip', size: '128 MB', type: 'Audio Archive', icon: 'folder_zip', iconColor: '#8B5CF6', status: 'Scanning...', colors: ['#DBEAFE', '#1D4ED8'] as [string, string] },
-  { name: 'routing_rules.csv', size: '340 KB', type: 'CSV Export', icon: 'table_chart', iconColor: '#10B981', status: 'Parsed', colors: ['#D1FAE5', '#065F46'] as [string, string] },
-  { name: 'legacy_handlers.ihd', size: '4.1 MB', type: 'Unknown format', icon: 'error_outline', iconColor: '#EF4444', status: 'Parse Failed — unsupported format, flag for SME', colors: ['#FEE2E2', '#DC2626'] as [string, string] },
-];
+interface SampleFile {
+  url: string;
+  filename: string;
+}
+
+const DEFAULT_SAMPLE_FILE: SampleFile = { url: '/samples/avaya_ivr_export.json', filename: 'avaya_ivr_export.json' };
+
+// Per-scenario sample exports — each demo project gets a source-platform
+// export tailored to its own client/inventory instead of one shared file.
+const SCENARIO_SAMPLE_FILES: Record<string, SampleFile> = {
+  'avaya-connect': { url: '/samples/avaya_connect_export.json', filename: 'avaya_connect_export.json' },
+};
+
+function fileIcon(name: string): { icon: string; color: string } {
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  if (ext === 'json') return { icon: 'data_object', color: '#E8612D' };
+  if (ext === 'xml' || ext === 'vxml') return { icon: 'description', color: '#E8612D' };
+  if (ext === 'zip') return { icon: 'folder_zip', color: '#8B5CF6' };
+  if (ext === 'csv') return { icon: 'table_chart', color: '#10B981' };
+  if (ext === 'wav' || ext === 'mp3') return { icon: 'graphic_eq', color: '#3B82F6' };
+  return { icon: 'insert_drive_file', color: '#6B7280' };
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+type UploadStatus = 'ready' | 'parsing' | 'parsed' | 'failed';
+
+interface UploadEntry {
+  file: File;
+  status: UploadStatus;
+  message?: string;
+}
+
+function statusBadgeFor(entry: UploadEntry): { label: string; colors: [string, string] } {
+  switch (entry.status) {
+    case 'parsed':
+      return { label: entry.message ?? 'Parsed', colors: ['#D1FAE5', '#065F46'] };
+    case 'parsing':
+      return { label: 'Parsing…', colors: ['#DBEAFE', '#1D4ED8'] };
+    case 'failed':
+      return { label: entry.message ?? 'Parse failed', colors: ['#FEE2E2', '#DC2626'] };
+    default:
+      return { label: 'Ready to parse', colors: ['#F3F4F6', '#374151'] };
+  }
+}
 
 export default function Connect() {
-  const { scenarioId, capabilities } = useData();
+  const { scenarioId, capabilities, mergeScenario } = useData();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [tab, setTab] = useState<'connector' | 'upload'>('connector');
-  const [platform, setPlatform] = useState<string | null>(null);
+  const [platform, setPlatform] = useState<string | null>('avaya-aura');
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [connecting, setConnecting] = useState(false);
   const [result, setResult] = useState<ConnectionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [files, setFiles] = useState<UploadEntry[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const [parsing, setParsing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const sampleFile = SCENARIO_SAMPLE_FILES[scenarioId] ?? DEFAULT_SAMPLE_FILE;
   const selected = PLATFORMS.find((p) => p.id === platform) ?? null;
   const isLive =
     platform === 'genesys-cloud' ? capabilities?.genesysCloud : platform === 'amazon-connect' ? capabilities?.amazonConnect : false;
@@ -121,6 +169,66 @@ export default function Connect() {
       setError(err instanceof ApiError ? err.message : 'Connect & Discover failed.');
     } finally {
       setConnecting(false);
+    }
+  }
+
+  function addFiles(fileList: FileList | File[]) {
+    const incoming = Array.from(fileList).map((file) => ({ file, status: 'ready' as UploadStatus }));
+    setFiles((prev) => [...prev, ...incoming]);
+  }
+
+  async function loadSampleFile() {
+    try {
+      const res = await fetch(sampleFile.url);
+      if (!res.ok) throw new Error(String(res.status));
+      const blob = await res.blob();
+      addFiles([new File([blob], sampleFile.filename, { type: 'application/json' })]);
+      showToast('Sample Avaya export added — click Parse & Discover to process it.');
+    } catch {
+      showToast('Could not load the sample file.');
+    }
+  }
+
+  async function parseAndDiscover() {
+    if (files.length === 0) {
+      showToast('Add at least one file to parse first.');
+      return;
+    }
+    setParsing(true);
+    const working = [...files];
+    let lastParsed: UploadResult | null = null;
+
+    for (let i = 0; i < working.length; i++) {
+      working[i] = { ...working[i], status: 'parsing' };
+      setFiles([...working]);
+      try {
+        const formData = new FormData();
+        formData.append('file', working[i].file);
+        formData.append('platform', platform ?? 'avaya-aura');
+        const res = await api.postFile<UploadResult>('/api/upload', formData);
+        working[i] = { ...working[i], status: res.parsed ? 'parsed' : 'failed', message: res.message ?? undefined };
+        if (res.parsed) lastParsed = res;
+      } catch (err) {
+        working[i] = {
+          ...working[i],
+          status: 'failed',
+          message: err instanceof ApiError ? err.message : 'Upload failed.',
+        };
+      }
+      setFiles([...working]);
+    }
+    setParsing(false);
+
+    if (lastParsed) {
+      mergeScenario(scenarioId, {
+        discovered: lastParsed.discovered,
+        inventory: lastParsed.inventory,
+        gap: lastParsed.gap ?? undefined,
+      });
+      showToast(`Parsed ${lastParsed.inventory.length} objects — proceeding to discovery.`);
+      navigate('/discovery');
+    } else {
+      showToast('No files parsed successfully — check the status below.');
     }
   }
 
@@ -309,15 +417,37 @@ export default function Connect() {
         </>
       ) : (
         <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".json,.xml,.vxml,.csv,.wav,.mp3,.zip"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              if (e.target.files?.length) addFiles(e.target.files);
+              e.target.value = '';
+            }}
+          />
           <div
-            onClick={() => showToast('File picker is not available in this demo environment — drop-to-upload only.')}
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+            }}
             style={{
-              background: 'var(--surface)',
-              border: '2px dashed var(--border-input)',
+              background: dragOver ? 'var(--brand-tint-bg)' : 'var(--surface)',
+              border: `2px dashed ${dragOver ? 'var(--brand)' : 'var(--border-input)'}`,
               borderRadius: 'var(--radius-lg)',
               padding: 40,
               textAlign: 'center',
               cursor: 'pointer',
+              transition: 'background 0.15s, border-color 0.15s',
             }}
           >
             <span className="material-icons-outlined" style={{ fontSize: 32, color: 'var(--text-muted)' }}>cloud_upload</span>
@@ -327,31 +457,55 @@ export default function Connect() {
             </p>
           </div>
 
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--text-tertiary)' }}>
+            <span className="material-icons-outlined" style={{ fontSize: 15 }}>info</span>
+            Don't have an export handy?
+            <a href={sampleFile.url} download style={{ color: 'var(--brand)', fontWeight: 600 }}>
+              Download the sample Avaya export
+            </a>
+            or
+            <button
+              onClick={loadSampleFile}
+              style={{ border: 'none', background: 'none', color: 'var(--brand)', fontWeight: 600, cursor: 'pointer', padding: 0, fontSize: 12 }}
+            >
+              add it directly
+            </button>
+          </div>
+
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22 }}>
             <h3 style={{ marginTop: 0, fontSize: 14 }}>Upload Source Files</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {UPLOADED_FILES.map((f) => (
-                <div key={f.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--divider)' }}>
-                  <span className="material-icons-outlined" style={{ color: f.iconColor }}>{f.icon}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{f.size} · {f.type}</div>
-                  </div>
-                  <StatusBadge label={f.status} colors={f.colors} />
-                </div>
-              ))}
-            </div>
+            {files.length === 0 ? (
+              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No files added yet.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {files.map((entry, i) => {
+                  const { icon, color } = fileIcon(entry.file.name);
+                  const badge = statusBadgeFor(entry);
+                  return (
+                    <div key={`${entry.file.name}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--divider)' }}>
+                      <span className="material-icons-outlined" style={{ color }}>{icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{entry.file.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatBytes(entry.file.size)}</div>
+                      </div>
+                      <StatusBadge label={badge.label} colors={badge.colors} />
+                      <Button
+                        variant="ghost"
+                        onClick={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                        style={{ padding: '4px 8px' }}
+                      >
+                        <span className="material-icons-outlined" style={{ fontSize: 16 }}>close</span>
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div>
-            <Button
-              variant="primary"
-              onClick={() => {
-                showToast('Files parsed — proceeding to discovery.');
-                navigate('/discovery');
-              }}
-            >
-              Parse & Discover
+            <Button variant="primary" onClick={parseAndDiscover} disabled={parsing}>
+              {parsing ? 'Parsing…' : 'Parse & Discover'}
               <span className="material-icons-outlined" style={{ fontSize: 16 }}>east</span>
             </Button>
           </div>

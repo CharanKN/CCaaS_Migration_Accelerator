@@ -52,9 +52,15 @@ export interface TestCase {
   result: string | null;
 }
 
+export interface ArchComponent {
+  name: string;
+  type?: string | null;
+  objects?: string | null;
+}
+
 export interface Architecture {
-  sourceComponents?: string[];
-  targetComponents?: string[];
+  sourceComponents?: ArchComponent[];
+  targetComponents?: ArchComponent[];
   [key: string]: unknown;
 }
 
@@ -73,6 +79,24 @@ export interface Scenario {
   deployLogs: DeployLog[];
   tests: TestCase[];
   architecture: Architecture | null;
+}
+
+// Card-level summary for the Projects grid. Distinct from ScenarioSummary
+// (which mirrors the backend Scenario shape) — this carries UI-only fields
+// like status colors and avatars that only the Projects page renders.
+export interface ProjectSummary {
+  name: string;
+  client: string;
+  source: string;
+  target: string;
+  status: string;
+  statusColors: [string, string];
+  stage: string;
+  progress: number;
+  barColor: string;
+  updated: string;
+  avatars: string[];
+  scenarioId?: ScenarioId;
 }
 
 export interface ScenarioSummary {
@@ -111,6 +135,17 @@ export interface DiscoverResult {
   discovered: DiscoveredItem[];
   inventory: InventoryItem[];
   gap: Partial<GapSummary>;
+}
+
+export interface UploadResult {
+  filename: string;
+  size: number;
+  platform: string;
+  parsed: boolean;
+  message: string | null;
+  discovered: DiscoveredItem[];
+  inventory: InventoryItem[];
+  gap: GapSummary | null;
 }
 
 export interface ConvertRequest {

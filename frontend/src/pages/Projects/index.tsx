@@ -1,134 +1,122 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ToastContext';
 import { StatCard } from '../../components/StatCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { Button } from '../../components/Button';
-import type { ScenarioId } from '../../types/scenario';
+import { Modal } from '../../components/Modal';
+import type { ProjectSummary, Scenario } from '../../types/scenario';
 
-// Verbatim from the original .dc.html `statCards` literal array — these are
-// fixed illustrative numbers in the original, not derived from the dataset.
-const STAT_CARDS = [
-  { label: 'Total Projects', value: '12', icon: 'folder', tone: 'neutral' as const, trend: '↑ 3 this quarter' },
-  { label: 'In Progress', value: '5', icon: 'sync', tone: 'info' as const, trend: 'Active migrations' },
-  { label: 'Completed', value: '6', icon: 'check_circle', tone: 'good' as const, trend: '100% success rate' },
-  { label: 'Objects Migrated', value: '2,847', icon: 'inventory_2', tone: 'neutral' as const, trend: 'Across all projects' },
-];
+// Source/target platform choices offered in the "New Project" wizard — mirrors
+// the platform vocabulary used on the Connect page.
+const SOURCE_PLATFORMS = ['Avaya Aura', 'Avaya CMS', 'Cisco UCCE', 'Genesys Engage', 'Mitel / Unify', 'PureConnect'];
+const TARGET_PLATFORMS = ['Amazon Connect', 'Genesys Cloud', 'Five9', 'Twilio Flex'];
+const NEW_PROJECT_BAR_COLOR = '#E8612D';
 
-interface ProjectCardDef {
-  name: string;
-  client: string;
-  source: string;
-  target: string;
-  status: string;
-  statusColors: [string, string];
-  stage: string;
-  progress: number;
-  barColor: string;
-  updated: string;
-  avatars: string[];
-  scenarioId?: ScenarioId;
+// Slugify a project name into a scenario id, tie-broken with a short random
+// suffix so two projects with the same name don't collide.
+function slugify(name: string): string {
+  const base = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const suffix = Math.random().toString(36).slice(2, 6);
+  return `${base || 'project'}-${suffix}`;
 }
 
-// Verbatim from the original `projects` literal array. Two cards (HealthFirst,
-// InsureCo) don't set a scenario in the original either — they just navigate
-// to Overview showing whatever project was last selected. Reproduced as-is.
-const PROJECTS: ProjectCardDef[] = [
-  {
-    name: 'Acme IVR Migration',
-    client: 'Acme Financial Corp',
-    source: 'Avaya Aura',
-    target: 'Genesys Cloud',
-    status: 'In Progress',
-    statusColors: ['#DBEAFE', '#1D4ED8'],
-    stage: 'Mapping Phase',
-    progress: 62,
-    barColor: '#E8612D',
-    updated: '2h ago',
-    avatars: ['RK', 'SP'],
-    scenarioId: 'avaya-genesys',
-  },
-  {
-    name: 'TeleCorp Cloud Migration',
-    client: 'TeleCorp Insurance',
-    source: 'Cisco UCCE',
-    target: 'Amazon Connect',
-    status: 'In Progress',
-    statusColors: ['#DBEAFE', '#1D4ED8'],
-    stage: 'Discovery',
-    progress: 35,
-    barColor: '#3B82F6',
-    updated: '5h ago',
-    avatars: ['AM', 'JD'],
-    scenarioId: 'cisco-connect',
-  },
-  {
-    name: 'GlobalBank Modernization',
-    client: 'GlobalBank Holdings',
-    source: 'Genesys Engage',
-    target: 'Genesys Cloud',
-    status: 'Completed',
-    statusColors: ['#D1FAE5', '#065F46'],
-    stage: 'Cutover Done',
-    progress: 100,
-    barColor: '#10B981',
-    updated: '3d ago',
-    avatars: ['NK', 'PR'],
-    scenarioId: 'engage-genesys',
-  },
-  {
-    name: 'HealthFirst CC',
-    client: 'HealthFirst Inc',
-    source: 'Avaya CMS',
-    target: 'Five9',
-    status: 'In Progress',
-    statusColors: ['#DBEAFE', '#1D4ED8'],
-    stage: 'Testing',
-    progress: 78,
-    barColor: '#E8612D',
-    updated: '1h ago',
-    avatars: ['KL', 'MV'],
-  },
-  {
-    name: 'RetailMax Omnichannel',
-    client: 'RetailMax Corp',
-    source: 'Mitel',
-    target: 'Twilio Flex',
-    status: 'On Hold',
-    statusColors: ['#FEF3C7', '#92400E'],
-    stage: 'Pending Approval',
-    progress: 15,
-    barColor: '#F59E0B',
-    updated: '1w ago',
-    avatars: ['TS', 'RG'],
-    scenarioId: 'mitel-twilio',
-  },
-  {
-    name: 'InsureCo IVR Redesign',
-    client: 'InsureCo Ltd',
-    source: 'PureConnect',
-    target: 'Amazon Connect',
-    status: 'In Progress',
-    statusColors: ['#DBEAFE', '#1D4ED8'],
-    stage: 'Conversion',
-    progress: 55,
-    barColor: '#8B5CF6',
-    updated: '4h ago',
-    avatars: ['DS', 'LP'],
-  },
-];
+function initialsFor(email: string | null): string[] {
+  if (!email) return ['YOU'];
+  const name = email.split('@')[0] ?? email;
+  const parts = name.split(/[._-]+/).filter(Boolean);
+  const initials = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('');
+  return [initials || name.slice(0, 2).toUpperCase()];
+}
 
 export default function Projects() {
-  const { setScenarioId } = useData();
+  const { setScenarioId, addScenario, projects, addProject } = useData();
+  const { email } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
 
-  const filtered = PROJECTS.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    client: '',
+    source: SOURCE_PLATFORMS[0],
+    target: TARGET_PLATFORMS[0],
+  });
 
-  function openProject(p: ProjectCardDef) {
+  const filtered = projects.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+
+  const statCards = [
+    { label: 'Total Projects', value: String(projects.length), icon: 'folder', tone: 'neutral' as const, trend: '↑ live count' },
+    {
+      label: 'In Progress',
+      value: String(projects.filter((p) => p.status === 'In Progress').length),
+      icon: 'sync',
+      tone: 'info' as const,
+      trend: 'Active migrations',
+    },
+    {
+      label: 'Completed',
+      value: String(projects.filter((p) => p.status === 'Completed').length),
+      icon: 'check_circle',
+      tone: 'good' as const,
+      trend: '100% success rate',
+    },
+    { label: 'Objects Migrated', value: '2,847', icon: 'inventory_2', tone: 'neutral' as const, trend: 'Across all projects' },
+  ];
+
+  function openProject(p: ProjectSummary) {
     if (p.scenarioId) setScenarioId(p.scenarioId);
+    navigate('/overview');
+  }
+
+  function createProject() {
+    const name = form.name.trim();
+    const client = form.client.trim();
+    if (!name || !client) {
+      showToast('Give the project a name and a client before creating it.');
+      return;
+    }
+    const scenarioId = slugify(name);
+    const newScenario: Scenario = {
+      name,
+      client,
+      source: form.source,
+      target: form.target,
+      stage: 'Discovery',
+      progress: 0,
+      pipeline: { done: [], active: 'connect' },
+      gap: null,
+      discovered: [],
+      inventory: [],
+      mappings: [],
+      deployLogs: [],
+      tests: [],
+      architecture: null,
+    };
+    const newCard: ProjectSummary = {
+      name,
+      client,
+      source: form.source,
+      target: form.target,
+      status: 'In Progress',
+      statusColors: ['#DBEAFE', '#1D4ED8'],
+      stage: 'Discovery',
+      progress: 0,
+      barColor: NEW_PROJECT_BAR_COLOR,
+      updated: 'Just now',
+      avatars: initialsFor(email),
+      scenarioId,
+    };
+
+    addScenario(scenarioId, newScenario);
+    addProject(newCard);
+    setScenarioId(scenarioId);
+    setShowCreate(false);
+    setForm({ name: '', client: '', source: SOURCE_PLATFORMS[0], target: TARGET_PLATFORMS[0] });
+    showToast(`"${name}" created.`);
     navigate('/overview');
   }
 
@@ -141,7 +129,7 @@ export default function Projects() {
             Track and manage all CCaaS migration initiatives
           </p>
         </div>
-        <Button variant="primary" onClick={() => showToast('Project creation is not available in this demo environment.')}>
+        <Button variant="primary" onClick={() => setShowCreate(true)}>
           <span className="material-icons-outlined" style={{ fontSize: 16 }}>
             add
           </span>
@@ -150,7 +138,7 @@ export default function Projects() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)' }}>
-        {STAT_CARDS.map((s) => (
+        {statCards.map((s) => (
           <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} tone={s.tone} trend={s.trend} />
         ))}
       </div>
@@ -253,6 +241,72 @@ export default function Projects() {
         ))}
         {filtered.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No projects match "{search}".</p>}
       </div>
+
+      <Modal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        title="New Migration Project"
+        footer={
+          <>
+            <Button onClick={() => setShowCreate(false)}>Cancel</Button>
+            <Button variant="primary" onClick={createProject}>
+              <span className="material-icons-outlined" style={{ fontSize: 16 }}>add</span>
+              Create Project
+            </Button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <label style={{ fontSize: 12, fontWeight: 600 }}>
+            Project Name
+            <input
+              autoFocus
+              placeholder="e.g. Northbridge IVR Migration"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              style={{ display: 'block', width: '100%', marginTop: 6, padding: '9px 12px', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--border-input)' }}
+            />
+          </label>
+          <label style={{ fontSize: 12, fontWeight: 600 }}>
+            Client Name
+            <input
+              placeholder="e.g. Northbridge Utilities"
+              value={form.client}
+              onChange={(e) => setForm((f) => ({ ...f, client: e.target.value }))}
+              style={{ display: 'block', width: '100%', marginTop: 6, padding: '9px 12px', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--border-input)' }}
+            />
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <label style={{ fontSize: 12, fontWeight: 600 }}>
+              Source Platform
+              <select
+                value={form.source}
+                onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
+                style={{ display: 'block', width: '100%', marginTop: 6, padding: '9px 12px', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--border-input)' }}
+              >
+                {SOURCE_PLATFORMS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </label>
+            <label style={{ fontSize: 12, fontWeight: 600 }}>
+              Target Platform
+              <select
+                value={form.target}
+                onChange={(e) => setForm((f) => ({ ...f, target: e.target.value }))}
+                style={{ display: 'block', width: '100%', marginTop: 6, padding: '9px 12px', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--border-input)' }}
+              >
+                {TARGET_PLATFORMS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+            Creates a new project and opens its overview — ready for discovery, mapping, and the rest of the pipeline.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

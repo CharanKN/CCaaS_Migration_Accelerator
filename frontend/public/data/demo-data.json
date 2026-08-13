@@ -990,6 +990,201 @@
           }
         ]
       }
+    },
+    "avaya-connect": {
+      "name": "Avaya to Amazon Connect Migration",
+      "client": "Meridian Financial Group",
+      "source": "Avaya Aura",
+      "target": "Amazon Connect",
+      "stage": "Mapping Phase",
+      "progress": 64,
+      "pipeline": {
+        "done": ["connect", "discover", "analyze"],
+        "active": "map"
+      },
+      "gap": {
+        "auto": 162,
+        "review": 19,
+        "unsupported": 6,
+        "complexity": "6.8"
+      },
+      "discovered": [
+        { "label": "IVR Call Flows (Vectors)", "count": 7, "status": "Parsed" },
+        { "label": "Audio Prompts (Announcements)", "count": 118, "status": "Parsed" },
+        { "label": "Queues (Skills/Splits)", "count": 19, "status": "Parsed" },
+        { "label": "Skills (EAS)", "count": 14, "status": "Parsed" },
+        { "label": "DNIS / VDNs", "count": 10, "status": "Parsed" },
+        { "label": "Holiday Tables", "count": 4, "status": "1 Warning" }
+      ],
+      "inventory": [
+        {
+          "name": "Main IVR — Member Services",
+          "id": "VDN-77401",
+          "type": "Vector",
+          "complexity": "High",
+          "cpct": 88,
+          "deps": "14 prompts, 5 skills",
+          "status": "Auto-mapped"
+        },
+        {
+          "name": "Loan Servicing Vector",
+          "id": "VDN-77402",
+          "type": "Vector",
+          "complexity": "Med",
+          "cpct": 58,
+          "deps": "9 prompts, 3 skills",
+          "status": "Auto-mapped"
+        },
+        {
+          "name": "Card Fraud Alert (Adjunct)",
+          "id": "VDN-77410",
+          "type": "Vector",
+          "complexity": "High",
+          "cpct": 92,
+          "deps": "5 prompts, ASAI link",
+          "status": "Review"
+        },
+        {
+          "name": "Teller_Queue_1",
+          "id": "SPL-001",
+          "type": "Skill/Split",
+          "complexity": "Low",
+          "cpct": 22,
+          "deps": "4 agent groups",
+          "status": "Auto-mapped"
+        },
+        {
+          "name": "Fraud_EAS_Skill",
+          "id": "SK-009",
+          "type": "Skill",
+          "complexity": "Med",
+          "cpct": 52,
+          "deps": "3 splits",
+          "status": "Review"
+        },
+        {
+          "name": "CardAuth_DataDip (ASAI)",
+          "id": "ADJ-001",
+          "type": "Adjunct Route",
+          "complexity": "High",
+          "cpct": 96,
+          "deps": "External CTI",
+          "status": "Unsupported"
+        }
+      ],
+      "mappings": [
+        {
+          "sName": "Main_IVR_v4",
+          "sType": "Avaya Vector",
+          "tName": "Member Services Inbound Flow",
+          "tType": "Connect Flow",
+          "score": 93,
+          "status": "Mapped"
+        },
+        {
+          "sName": "Teller_Queue_1",
+          "sType": "Avaya Split",
+          "tName": "Teller Queue + Routing Profile",
+          "tType": "Connect Queue",
+          "score": 96,
+          "status": "Mapped"
+        },
+        {
+          "sName": "ann_welcome_77401.wav",
+          "sType": "Announcement",
+          "tName": "welcome_prompt.wav",
+          "tType": "S3 Prompt",
+          "score": 100,
+          "status": "Mapped"
+        },
+        {
+          "sName": "Fraud_EAS_Skill",
+          "sType": "Avaya Skill",
+          "tName": "Fraud Routing Profile",
+          "tType": "Connect Profile",
+          "score": 68,
+          "status": "Review"
+        },
+        {
+          "sName": "HolidayTable_02",
+          "sType": "Holiday Table",
+          "tName": "Hours of Operation",
+          "tType": "Connect Hours",
+          "score": 85,
+          "status": "Mapped"
+        },
+        {
+          "sName": "CardAuth_DataDip (ASAI)",
+          "sType": "Adjunct Route",
+          "tName": "Lambda + Lex bot rebuild",
+          "tType": "Custom build",
+          "score": 18,
+          "status": "Conflict"
+        }
+      ],
+      "deployLogs": [
+        { "t": "11:04:12", "ok": true, "msg": "AWS STS session established (us-east-1)" },
+        { "t": "11:04:15", "ok": true, "msg": "Connect instance validated: meridian-fg-uat" },
+        { "t": "11:04:21", "ok": true, "msg": "Creating queues (16/16) and routing profiles (11/11)" },
+        { "t": "11:04:34", "ok": true, "msg": "Uploading prompts to S3 (94/118)" },
+        { "t": "11:04:47", "ok": false, "msg": "Creating contact flows... Lambda ARN remapping (5/7)" }
+      ],
+      "tests": [
+        {
+          "name": "Main Menu → Loan Servicing",
+          "id": "TC-201",
+          "input": "DTMF: 1",
+          "expected": "Route to Loan Servicing Queue",
+          "latency": "240ms",
+          "result": "Pass"
+        },
+        {
+          "name": "Card Fraud Alert Routing",
+          "id": "TC-202",
+          "input": "Speech: \"report fraud\"",
+          "expected": "Priority queue + SMS alert",
+          "latency": "710ms",
+          "result": "Warning"
+        },
+        {
+          "name": "Card Auth Data Dip",
+          "id": "TC-203",
+          "input": "ANI lookup",
+          "expected": "Lambda returns account tier",
+          "latency": "1180ms",
+          "result": "Fail"
+        },
+        {
+          "name": "After Hours Routing",
+          "id": "TC-204",
+          "input": "Call at 23:00",
+          "expected": "Closed message + callback",
+          "latency": "260ms",
+          "result": "Pass"
+        },
+        {
+          "name": "Teller Queue Overflow",
+          "id": "TC-205",
+          "input": "Queue depth > 10",
+          "expected": "Overflow to Support",
+          "latency": "300ms",
+          "result": "Pass"
+        }
+      ],
+      "architecture": {
+        "sourceComponents": [
+          { "name": "Communication Manager", "type": "Core PBX / ACD", "objects": "19 splits, 14 skills" },
+          { "name": "Avaya Aura AES", "type": "CTI / ASAI Adjunct", "objects": "1 CardAuth data dip" },
+          { "name": "Announcement Board", "type": "Audio Storage", "objects": "118 .wav prompts" },
+          { "name": "CMS R18", "type": "Reporting", "objects": "28 custom reports" }
+        ],
+        "targetComponents": [
+          { "name": "Amazon Connect Instance", "type": "CCaaS Core", "objects": "7 contact flows" },
+          { "name": "AWS Lambda", "type": "Data Dips / Logic", "objects": "2 functions" },
+          { "name": "Amazon Lex", "type": "Speech / NLU", "objects": "1 bot" },
+          { "name": "S3 + Contact Lens", "type": "Storage & Analytics", "objects": "118 prompts" }
+        ]
+      }
     }
   }
 }

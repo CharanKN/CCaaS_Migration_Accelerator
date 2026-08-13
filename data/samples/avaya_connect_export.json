@@ -1,0 +1,199 @@
+{
+  "platform": "avaya-aura",
+  "sourceSystem": {
+    "product": "Avaya Aura Communication Manager",
+    "version": "8.1.3.0",
+    "switchName": "CM-MFG-01",
+    "customer": "Meridian Financial Group",
+    "exportedAt": "2026-08-05T14:20:00Z",
+    "exportTool": "ASA/OSSI CLI dump (list/display) + CMS R18 ODBC extract + Announcement Board directory listing, bundled by migration SME"
+  },
+  "vectors": [
+    {
+      "number": 1,
+      "name": "Main_IVR_v4",
+      "steps": [
+        "wait-time 2 secs hearing ringback",
+        "announcement 77401 (ann_welcome_77401.wav)",
+        "collect 1 digits after announcement 77401 for subsequent routing",
+        "goto step 6 if digits = 1",
+        "goto step 8 if digits = 2",
+        "route-to number 77410 with cov n if unconditionally",
+        "queue-to skill 3 pri m",
+        "announcement 77402 (ann_hold_77401.wav)",
+        "disconnect after announcement 77403 (ann_disc_77401.wav)"
+      ],
+      "referencedAnnouncements": ["ann_welcome_77401.wav", "ann_hold_77401.wav", "ann_disc_77401.wav"],
+      "referencedSkills": [3, 7, 9],
+      "adjunctRouting": false
+    },
+    {
+      "number": 2,
+      "name": "Loan_Servicing_v2",
+      "steps": [
+        "wait-time 1 secs hearing ringback",
+        "announcement 77420 (ann_loan_menu_77402.wav)",
+        "queue-to skill 7 pri h",
+        "announcement 77421 (ann_loan_hold_77402.wav)",
+        "disconnect after announcement 77403"
+      ],
+      "referencedAnnouncements": ["ann_loan_menu_77402.wav", "ann_loan_hold_77402.wav"],
+      "referencedSkills": [7],
+      "adjunctRouting": false
+    },
+    {
+      "number": 3,
+      "name": "Card_Fraud_Alert_v3",
+      "steps": [
+        "wait-time 1 secs hearing ringback",
+        "announcement 77430 (ann_fraud_disclaimer_77410.wav)",
+        "adjunct routing link asai_1 CardAuth_DataDip",
+        "collect 4 digits after announcement 77431 for subsequent routing",
+        "route-to number 77410 with cov n if digits-entered",
+        "goto step 8 if failure",
+        "queue-to skill 9 pri t",
+        "announcement 77432 (ann_fraud_hold_77410.wav)",
+        "disconnect after announcement 77403"
+      ],
+      "referencedAnnouncements": ["ann_fraud_disclaimer_77410.wav", "ann_fraud_hold_77410.wav"],
+      "referencedSkills": [9],
+      "adjunctRouting": true,
+      "asaiLink": "CardAuth_DataDip"
+    },
+    {
+      "number": 4,
+      "name": "Teller_Support_v1",
+      "steps": [
+        "wait-time 1 secs hearing ringback",
+        "announcement 77440 (ann_teller_menu_77403.wav)",
+        "queue-to skill 3 pri m",
+        "queue-to skill 7 pri l",
+        "announcement 77441 (ann_teller_hold_77403.wav)",
+        "disconnect after announcement 77403"
+      ],
+      "referencedAnnouncements": ["ann_teller_menu_77403.wav", "ann_teller_hold_77403.wav"],
+      "referencedSkills": [3, 7],
+      "adjunctRouting": false
+    },
+    {
+      "number": 5,
+      "name": "AfterHours_v1",
+      "steps": [
+        "goto step 3 if time-of-day is 0800 to 1800 mon-fri",
+        "announcement 77450 (ann_afterhours_77405.wav)",
+        "disconnect after announcement 77403",
+        "queue-to skill 3 pri l"
+      ],
+      "referencedAnnouncements": ["ann_afterhours_77405.wav"],
+      "referencedSkills": [3],
+      "adjunctRouting": false
+    },
+    {
+      "number": 6,
+      "name": "VIP_Priority_v1",
+      "steps": [
+        "wait-time 1 secs hearing ringback",
+        "announcement 77460 (ann_vip_greeting_77420.wav)",
+        "check split 4 pri m if calls-queued > 3",
+        "queue-to skill 3 pri t",
+        "announcement 77461 (ann_vip_hold_77420.wav)",
+        "converse-on skill 3 pri t",
+        "disconnect after announcement 77403"
+      ],
+      "referencedAnnouncements": ["ann_vip_greeting_77420.wav", "ann_vip_hold_77420.wav"],
+      "referencedSkills": [3],
+      "adjunctRouting": false,
+      "priorityRouting": true
+    },
+    {
+      "number": 7,
+      "name": "Card_Activation_v1",
+      "steps": [
+        "wait-time 1 secs hearing ringback",
+        "announcement 77470 (ann_activation_menu_77406.wav)",
+        "queue-to skill 9 pri m",
+        "announcement 77471 (ann_activation_hold_77406.wav)",
+        "disconnect after announcement 77403"
+      ],
+      "referencedAnnouncements": ["ann_activation_menu_77406.wav", "ann_activation_hold_77406.wav"],
+      "referencedSkills": [9],
+      "adjunctRouting": false
+    }
+  ],
+  "vdns": [
+    { "vdn": "77401", "name": "Main IVR - Member Services", "vector": 1, "cor": 1, "tn": 1, "ani": ["8005557401"] },
+    { "vdn": "77402", "name": "Loan Servicing Vector", "vector": 2, "cor": 1, "tn": 1, "ani": ["8005557402"] },
+    { "vdn": "77410", "name": "Card Fraud Alert (Adjunct)", "vector": 3, "cor": 2, "tn": 1, "ani": ["8005557410"] },
+    { "vdn": "77403", "name": "Teller Support Vector", "vector": 4, "cor": 1, "tn": 1, "ani": ["8005557403"] },
+    { "vdn": "77405", "name": "After-Hours / Holiday Routing", "vector": 5, "cor": 1, "tn": 1, "ani": ["8005557405"] },
+    { "vdn": "77420", "name": "VIP Priority Routing", "vector": 6, "cor": 3, "tn": 1, "ani": ["8005557420"] },
+    { "vdn": "77406", "name": "Card Activation Vector", "vector": 7, "cor": 1, "tn": 1, "ani": ["8005557406"] },
+    { "vdn": "77402B", "name": "Loan Servicing Vector (Spanish Overflow)", "vector": 2, "cor": 1, "tn": 1, "ani": ["8005557407"] },
+    { "vdn": "77499", "name": "Teller Support Vector (Overflow)", "vector": 4, "cor": 1, "tn": 1, "ani": ["8005557408"] },
+    { "vdn": "77408", "name": "Card Fraud Alert (Overflow)", "vector": 3, "cor": 2, "tn": 1, "ani": ["8005557409"] }
+  ],
+  "huntGroupsSplits": [
+    { "group": 1, "name": "Teller_Split_1", "type": "ucd-mia", "agents": 20, "queueLength": 35 },
+    { "group": 2, "name": "Loan_Split", "type": "ucd-mia", "agents": 12, "queueLength": 22 },
+    { "group": 3, "name": "Member_Services_Split", "type": "ucd-mia", "agents": 24, "queueLength": 40 },
+    { "group": 4, "name": "VIP_Split", "type": "ead-mia", "agents": 5, "queueLength": 8 },
+    { "group": 5, "name": "Fraud_Split", "type": "ead-mia", "agents": 10, "queueLength": 15 },
+    { "group": 6, "name": "CardServices_Split", "type": "ucd-mia", "agents": 9, "queueLength": 18 },
+    { "group": 7, "name": "Overflow_Split", "type": "ucd-mia", "agents": 6, "queueLength": 12 },
+    { "group": 8, "name": "Spanish_Split", "type": "ucd-mia", "agents": 4, "queueLength": 8 },
+    { "group": 9, "name": "Escalation_Split", "type": "ucd-mia", "agents": 3, "queueLength": 6 },
+    { "group": 10, "name": "AfterHours_Split", "type": "ucd-mia", "agents": 3, "queueLength": 8 }
+  ],
+  "easSkills": [
+    { "skill": 3, "name": "MemberServices_EAS_Skill", "level1Agents": 14, "level2Agents": 3, "splitsAssigned": [1, 3] },
+    { "skill": 7, "name": "Loan_EAS_Skill", "level1Agents": 9, "level2Agents": 1, "splitsAssigned": [2] },
+    { "skill": 9, "name": "Fraud_EAS_Skill", "level1Agents": 8, "level2Agents": 2, "splitsAssigned": [5, 6] },
+    { "skill": 12, "name": "CardServices_EAS_Skill", "level1Agents": 7, "level2Agents": 1, "splitsAssigned": [6] },
+    { "skill": 15, "name": "Escalation_EAS_Skill", "level1Agents": 4, "level2Agents": 1, "splitsAssigned": [9] },
+    { "skill": 18, "name": "Spanish_EAS_Skill", "level1Agents": 4, "level2Agents": 0, "splitsAssigned": [8] },
+    { "skill": 21, "name": "VIP_EAS_Skill", "level1Agents": 5, "level2Agents": 2, "splitsAssigned": [4] },
+    { "skill": 24, "name": "AfterHours_EAS_Skill", "level1Agents": 3, "level2Agents": 0, "splitsAssigned": [10] }
+  ],
+  "announcements": [
+    { "file": "ann_welcome_77401.wav", "port": "77401", "description": "Welcome greeting", "durationSec": 8 },
+    { "file": "ann_hold_77401.wav", "port": "77402", "description": "Main queue hold loop", "durationSec": 42 },
+    { "file": "ann_disc_77401.wav", "port": "77403", "description": "Generic disconnect / goodbye", "durationSec": 4 },
+    { "file": "ann_loan_menu_77402.wav", "port": "77420", "description": "Loan servicing menu options", "durationSec": 13 },
+    { "file": "ann_loan_hold_77402.wav", "port": "77421", "description": "Loan servicing hold loop", "durationSec": 28 },
+    { "file": "ann_fraud_disclaimer_77410.wav", "port": "77430", "description": "Fraud reporting disclaimer", "durationSec": 16 },
+    { "file": "ann_fraud_hold_77410.wav", "port": "77432", "description": "Fraud alert hold loop", "durationSec": 20 },
+    { "file": "ann_teller_menu_77403.wav", "port": "77440", "description": "Teller support menu options", "durationSec": 14 },
+    { "file": "ann_teller_hold_77403.wav", "port": "77441", "description": "Teller support hold loop", "durationSec": 38 },
+    { "file": "ann_afterhours_77405.wav", "port": "77450", "description": "After-hours closure message", "durationSec": 21 },
+    { "file": "ann_vip_greeting_77420.wav", "port": "77460", "description": "VIP priority greeting", "durationSec": 9 },
+    { "file": "ann_vip_hold_77420.wav", "port": "77461", "description": "VIP queue hold loop", "durationSec": 24 },
+    { "file": "ann_activation_menu_77406.wav", "port": "77470", "description": "Card activation menu options", "durationSec": 11 },
+    { "file": "ann_activation_hold_77406.wav", "port": "77471", "description": "Card activation hold loop", "durationSec": 26 }
+  ],
+  "holidayTables": [
+    { "id": 1, "name": "HolidayTable_01", "entries": [
+      { "date": "2026-01-01", "routeTo": "vector 5" },
+      { "date": "2026-07-04", "routeTo": "vector 5" }
+    ] },
+    { "id": 2, "name": "HolidayTable_02", "entries": [
+      { "date": "2026-11-26", "routeTo": "vector 5" },
+      { "date": "2026-11-27", "routeTo": "vector 5" }
+    ] },
+    { "id": 3, "name": "HolidayTable_03", "entries": [
+      { "date": "2026-12-25", "routeTo": "vector 11" },
+      { "date": "2026-12-31", "routeTo": "vector 5" }
+    ],
+      "warning": "Route-to target 'vector 11' for 2026-12-25 does not exist in this export — retired vector, flag for SME review before cutover"
+    }
+  ],
+  "adjunctRoutes": [
+    {
+      "name": "CardAuth_DataDip",
+      "type": "ASAI",
+      "application": "AES CTI link to core banking fraud-detection system",
+      "description": "Pre-routing account lookup: pulls card status and fraud-risk tier from the core banking platform via ASAI event link before queueing",
+      "usedByVectors": [3],
+      "riskNotes": "No direct Amazon Connect equivalent — requires a Lambda data dip + Lex intent rebuild"
+    }
+  ]
+}

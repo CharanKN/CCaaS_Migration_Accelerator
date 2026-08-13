@@ -9,7 +9,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/app/config.py -> parents[2] is the repository root.
@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     github_branch: str = "main"
     github_target_directory: str = "terraform"
     github_api_url: str = "https://api.github.com"
+
+    @field_validator("github_api_url", mode="before")
+    @classmethod
+    def _default_github_api_url(cls, v: str | None) -> str:
+        # An empty GITHUB_API_URL in .env would otherwise override this
+        # default with "", producing a schemeless request URL.
+        return v or "https://api.github.com"
 
     # --- Database ---
     database_url: str = f"sqlite:///{REPO_ROOT / 'backend' / 'ccaas.db'}"

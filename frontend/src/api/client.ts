@@ -21,12 +21,13 @@ interface RequestOptions {
   method?: string;
   body?: unknown;
   form?: Record<string, string>;
+  formData?: FormData;
   auth?: boolean;
   params?: Record<string, string | undefined>;
 }
 
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, form, auth = true, params } = opts;
+  const { method = 'GET', body, form, formData, auth = true, params } = opts;
 
   let query = '';
   if (params) {
@@ -41,7 +42,10 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   let fetchBody: BodyInit | undefined;
 
-  if (form) {
+  if (formData) {
+    // No Content-Type — the browser sets multipart/form-data with the boundary.
+    fetchBody = formData;
+  } else if (form) {
     fetchBody = new URLSearchParams(form).toString();
     headers['Content-Type'] = 'application/x-www-form-urlencoded';
   } else if (body !== undefined) {
@@ -82,4 +86,5 @@ export const api = {
     request<T>(path, { method: 'POST', body, params }),
   postForm: <T>(path: string, form: Record<string, string>) =>
     request<T>(path, { method: 'POST', form, auth: false }),
+  postFile: <T>(path: string, formData: FormData) => request<T>(path, { method: 'POST', formData }),
 };

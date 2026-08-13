@@ -96,6 +96,20 @@ class ScenarioSummary(_Base):
     progress: int | None = None
 
 
+# --- File upload / parse ---
+class UploadResult(_Base):
+    """Result of parsing one uploaded source-export file."""
+
+    filename: str
+    size: int
+    platform: str
+    parsed: bool
+    message: str | None = None
+    discovered: list[DiscoveredItem] = Field(default_factory=list)
+    inventory: list[InventoryItem] = Field(default_factory=list)
+    gap: GapSummary | None = None
+
+
 # --- LLM convert ---
 class ConvertRequest(BaseModel):
     scenario_id: str = Field(..., description="Scenario to convert, e.g. 'avaya-genesys'")
