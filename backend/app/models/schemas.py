@@ -121,7 +121,9 @@ class ConvertResponse(BaseModel):
     scenario_id: str
     target: str | None = None
     model: str
-    artifact: str = Field(..., description="Generated artifact (e.g. Terraform / flow JSON)")
+    files: dict[str, str] = Field(
+        ..., description="Map of generated filename -> content (e.g. Terraform / flow JSON)"
+    )
 
 
 # --- GitHub deploy ---

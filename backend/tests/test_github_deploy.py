@@ -150,3 +150,24 @@ def test_upstream_error_surfaces_cleanly(enable_token, monkeypatch):
             directory="",
             commit_message="m",
         ))
+
+
+@pytest.mark.parametrize(
+    ("directory", "rel_path", "expected"),
+    [
+        # Normal case: bare filename gets the target directory prepended.
+        ("terraform", "main.tf", "terraform/main.tf"),
+        # A generated filename that redundantly repeats the target directory
+        # (e.g. an LLM naming its own file "terraform/main.tf") must not be
+        # nested a second time into "terraform/terraform/main.tf".
+        ("terraform", "terraform/main.tf", "terraform/main.tf"),
+        ("terraform", "/terraform/main.tf", "terraform/main.tf"),
+        # A subdirectory that merely shares the target directory's name as a
+        # prefix of a longer segment is not the same segment and must be kept.
+        ("terraform", "terraform-modules/main.tf", "terraform/terraform-modules/main.tf"),
+        # No target directory configured: pass through unchanged.
+        ("", "main.tf", "main.tf"),
+    ],
+)
+def test_full_path_avoids_double_nesting(directory, rel_path, expected):
+    assert github_deploy._full_path(directory, rel_path) == expected

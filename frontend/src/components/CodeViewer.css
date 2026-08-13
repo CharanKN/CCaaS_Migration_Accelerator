@@ -1,0 +1,84 @@
+/* Prism token colors — hand-picked to sit on the app's dark code-panel
+   background (var(--navy-deep)), matching the palette already used by
+   LiveLogConsole rather than importing a canned Prism theme. */
+.code-viewer {
+  background: var(--navy-deep);
+  border-radius: var(--radius-lg);
+  overflow: auto;
+  margin: 0;
+  padding: var(--space-4);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #e5e7eb;
+}
+
+.code-viewer code {
+  font-family: inherit;
+}
+
+.code-viewer .token.comment,
+.code-viewer .token.prolog,
+.code-viewer .token.doctype,
+.code-viewer .token.cdata {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.code-viewer .token.string,
+.code-viewer .token.attr-value,
+.code-viewer .token.value {
+  color: #a7f3d0;
+}
+
+.code-viewer .token.number,
+.code-viewer .token.boolean {
+  color: #93c5fd;
+}
+
+.code-viewer .token.keyword,
+.code-viewer .token.builtin,
+.code-viewer .token.class-name {
+  color: #fb923c;
+}
+
+.code-viewer .token.property,
+.code-viewer .token.attr-name,
+.code-viewer .token.tag {
+  color: #f0abfc;
+}
+
+.code-viewer .token.punctuation,
+.code-viewer .token.operator {
+  color: #9ca3af;
+}
+
+.code-viewer .token.function,
+.code-viewer .token.variable {
+  color: #93c5fd;
+}
+
+.code-viewer-lines {
+  display: table;
+  width: 100%;
+}
+
+.code-viewer-line {
+  display: table-row;
+}
+
+.code-viewer-line-number {
+  display: table-cell;
+  user-select: none;
+  text-align: right;
+  padding-right: var(--space-3);
+  color: #4b5563;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.code-viewer-line-content {
+  display: table-cell;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

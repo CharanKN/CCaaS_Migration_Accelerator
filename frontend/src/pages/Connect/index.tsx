@@ -1,11 +1,20 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/Button';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../components/ToastContext';
 import { api, ApiError } from '../../api/client';
+import { languageForFilename } from '../../components/CodeViewer';
+import { FilePreviewModal, type ResolvedPreview } from '../../components/FilePreviewModal';
+import { formatBytes } from '../../utils/format';
+import { fileIcon } from '../../utils/fileIcon';
 import type { ConnectionResult, DiscoverResult, UploadResult } from '../../types/scenario';
+
+// Files larger than this are previewed as a download prompt rather than
+// read into memory — matches the "Max 500MB per file" upload ceiling, where
+// reading the whole thing as text for a preview would be unreasonable.
+const PREVIEW_TEXT_MAX_BYTES = 2 * 1024 * 1024;
 
 interface Platform {
   id: string;
@@ -76,22 +85,6 @@ const SCENARIO_SAMPLE_FILES: Record<string, SampleFile> = {
   'avaya-connect': { url: '/samples/avaya_connect_export.json', filename: 'avaya_connect_export.json' },
 };
 
-function fileIcon(name: string): { icon: string; color: string } {
-  const ext = name.split('.').pop()?.toLowerCase() ?? '';
-  if (ext === 'json') return { icon: 'data_object', color: '#E8612D' };
-  if (ext === 'xml' || ext === 'vxml') return { icon: 'description', color: '#E8612D' };
-  if (ext === 'zip') return { icon: 'folder_zip', color: '#8B5CF6' };
-  if (ext === 'csv') return { icon: 'table_chart', color: '#10B981' };
-  if (ext === 'wav' || ext === 'mp3') return { icon: 'graphic_eq', color: '#3B82F6' };
-  return { icon: 'insert_drive_file', color: '#6B7280' };
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 type UploadStatus = 'ready' | 'parsing' | 'parsed' | 'failed';
 
 interface UploadEntry {
@@ -129,6 +122,45 @@ export default function Connect() {
   const [dragOver, setDragOver] = useState(false);
   const [parsing, setParsing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+  const resolvePreview = useCallback(
+    async (index: number): Promise<ResolvedPreview> => {
+      const file = files[index]?.file;
+      if (!file) return { kind: 'unsupported', note: 'File no longer available.' };
+
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+      if (file.type.startsWith('image/')) {
+        return { kind: 'image', url: URL.createObjectURL(file) };
+      }
+      if (file.type.startsWith('audio/') || ext === 'wav' || ext === 'mp3') {
+        return { kind: 'audio', url: URL.createObjectURL(file) };
+      }
+      if (ext === 'zip') {
+        return { kind: 'unsupported', note: "Archive contents can't be previewed here — it will be parsed after upload." };
+      }
+      if (file.size > PREVIEW_TEXT_MAX_BYTES) {
+        return {
+          kind: 'unsupported',
+          note: `This file is ${formatBytes(file.size)} — too large to preview inline. Download it to inspect the contents.`,
+          url: URL.createObjectURL(file),
+        };
+      }
+      try {
+        const text = await file.text();
+        return { kind: 'code', content: text, language: languageForFilename(file.name) };
+      } catch {
+        return { kind: 'unsupported', note: 'Could not read this file as text.' };
+      }
+    },
+    [files],
+  );
+
+  function openPreview(index: number) {
+    setPreviewIndex(index);
+    setPreviewOpen(true);
+  }
 
   const sampleFile = SCENARIO_SAMPLE_FILES[scenarioId] ?? DEFAULT_SAMPLE_FILE;
   const selected = PLATFORMS.find((p) => p.id === platform) ?? null;
@@ -491,8 +523,17 @@ export default function Connect() {
                       <StatusBadge label={badge.label} colors={badge.colors} />
                       <Button
                         variant="ghost"
+                        onClick={() => openPreview(i)}
+                        style={{ padding: '4px 8px' }}
+                        aria-label="Preview file"
+                      >
+                        <span className="material-icons-outlined" style={{ fontSize: 16 }}>visibility</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
                         onClick={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
                         style={{ padding: '4px 8px' }}
+                        aria-label="Remove file"
                       >
                         <span className="material-icons-outlined" style={{ fontSize: 16 }}>close</span>
                       </Button>
@@ -509,6 +550,18 @@ export default function Connect() {
               <span className="material-icons-outlined" style={{ fontSize: 16 }}>east</span>
             </Button>
           </div>
+
+          <FilePreviewModal
+            open={previewOpen}
+            onClose={() => setPreviewOpen(false)}
+            entries={files.map((entry) => ({
+              name: entry.file.name,
+              size: entry.file.size,
+              icon: fileIcon(entry.file.name).icon,
+            }))}
+            initialIndex={previewIndex}
+            resolve={resolvePreview}
+          />
         </>
       )}
     </div>

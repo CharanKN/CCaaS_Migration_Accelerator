@@ -108,7 +108,18 @@ def _full_path(directory: str, rel_path: str) -> str:
     rel = rel_path.lstrip("/")
     if not directory:
         return rel
-    return f"{directory.strip('/')}/{rel}"
+
+    clean_dir = directory.strip("/")
+    # A generated filename that already starts with the target directory
+    # (e.g. an LLM naming its own file "terraform/main.tf" while the server
+    # is configured to place files under "terraform/") would otherwise
+    # double up into "terraform/terraform/main.tf". Strip that one redundant
+    # leading segment rather than prepending on top of it.
+    prefix = f"{clean_dir}/"
+    if rel.lower().startswith(prefix.lower()):
+        rel = rel[len(prefix):]
+
+    return f"{clean_dir}/{rel}"
 
 
 async def commit_files(

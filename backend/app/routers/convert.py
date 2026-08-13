@@ -13,7 +13,7 @@ from ..config import get_settings
 from ..models import ConvertRequest, ConvertResponse
 from ..models_db.user import User
 from ..services.data_store import data_store
-from ..services.openrouter import generate_artifact
+from ..services.openrouter import generate_files
 from .auth import get_current_user
 
 router = APIRouter(prefix="/convert", tags=["convert"])
@@ -36,7 +36,7 @@ async def convert(req: ConvertRequest, _user: User = Depends(get_current_user)) 
         indent=2,
     )
 
-    artifact = await generate_artifact(
+    files = await generate_files(
         source_summary=source_summary,
         target=target,
         instructions=req.instructions,
@@ -45,5 +45,5 @@ async def convert(req: ConvertRequest, _user: User = Depends(get_current_user)) 
         scenario_id=req.scenario_id,
         target=target,
         model=settings.openrouter_model or "",
-        artifact=artifact,
+        files=files,
     )

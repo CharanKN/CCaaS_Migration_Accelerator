@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../components/ToastContext';
 import { Button } from '../../components/Button';
 import { LiveLogConsole } from '../../components/LiveLogConsole';
+import { languageForFilename } from '../../components/CodeViewer';
+import { FilePreviewModal, type ResolvedPreview } from '../../components/FilePreviewModal';
 import { api, ApiError } from '../../api/client';
+import { formatBytes } from '../../utils/format';
+import { fileIcon } from '../../utils/fileIcon';
 import type { DeployRequest, DeployResponse } from '../../types/scenario';
 
 interface EnvOption {
@@ -28,20 +32,41 @@ export default function Deploy() {
   const location = useLocation();
   const [environment, setEnvironment] = useState<string>('UAT');
 
-  const artifact =
-    (location.state as { artifact?: string } | null)?.artifact ??
-    `# Placeholder Terraform generated for ${scenario?.name ?? 'this migration'}\n# Visit Mapping and click "Convert & Deploy" to generate a real artifact.\n`;
+  const stateFiles = (location.state as { files?: Record<string, string> } | null)?.files;
+  const files = useMemo(
+    () =>
+      stateFiles ?? {
+        'main.tf': `# Placeholder Terraform generated for ${scenario?.name ?? 'this migration'}\n# Visit Mapping and click "Convert & Deploy" to generate a real artifact.\n`,
+      },
+    [stateFiles, scenario?.name],
+  );
+  const fileNames = Object.keys(files);
 
   const [deploying, setDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<DeployResponse | null>(null);
   const [deployError, setDeployError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+  const resolvePreview = useCallback(
+    async (index: number): Promise<ResolvedPreview> => {
+      const name = fileNames[index];
+      return { kind: 'code', content: files[name], language: languageForFilename(name) };
+    },
+    [fileNames, files],
+  );
+
+  function openPreview(index: number) {
+    setPreviewIndex(index);
+    setPreviewOpen(true);
+  }
 
   async function deployToGithub() {
     setDeploying(true);
     setDeployError(null);
     try {
       const req: DeployRequest = {
-        files: { 'main.tf': artifact },
+        files,
         commit_message: `Deploy migration artifact for ${scenario?.name ?? 'scenario'}`,
       };
       const res = await api.post<DeployResponse>('/api/deploy/github', req);
@@ -79,6 +104,48 @@ export default function Deploy() {
             Run Tests
             <span className="material-icons-outlined" style={{ fontSize: 16 }}>east</span>
           </Button>
+        </div>
+      </div>
+
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 14 }}>Generated Files</h3>
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-tertiary)' }}>
+              Review the LLM-generated artifact before it's committed to GitHub
+            </p>
+          </div>
+          <Button onClick={() => openPreview(0)} style={{ padding: '6px 12px', fontSize: 12 }}>
+            <span className="material-icons-outlined" style={{ fontSize: 15 }}>visibility</span>
+            Preview All
+          </Button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {fileNames.map((name, i) => {
+            const { icon, color } = fileIcon(name);
+            return (
+              <div
+                key={name}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '10px 12px',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <span className="material-icons-outlined" style={{ fontSize: 18, color }}>{icon}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatBytes(new Blob([files[name]]).size)}</div>
+                </div>
+                <Button variant="ghost" onClick={() => openPreview(i)} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid var(--border)' }}>
+                  Preview
+                </Button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -165,6 +232,14 @@ export default function Deploy() {
         </div>
         <LiveLogConsole lines={scenario.deployLogs ?? []} />
       </div>
+
+      <FilePreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        entries={fileNames.map((name) => ({ name, size: new Blob([files[name]]).size, icon: fileIcon(name).icon }))}
+        initialIndex={previewIndex}
+        resolve={resolvePreview}
+      />
     </div>
   );
 }

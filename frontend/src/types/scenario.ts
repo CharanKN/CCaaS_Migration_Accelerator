@@ -158,7 +158,7 @@ export interface ConvertResponse {
   scenario_id: string;
   target: string | null;
   model: string;
-  artifact: string;
+  files: Record<string, string>;
 }
 
 export interface DeployRequest {

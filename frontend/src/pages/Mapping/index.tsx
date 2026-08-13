@@ -39,7 +39,7 @@ export default function Mapping() {
     try {
       const req: ConvertRequest = { scenario_id: scenarioId };
       const res = await api.post<ConvertResponse>('/api/convert', req);
-      navigate('/deploy', { state: { artifact: res.artifact } });
+      navigate('/deploy', { state: { files: res.files } });
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Conversion failed.');
     } finally {
